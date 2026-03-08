@@ -10,6 +10,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bclas.nutry.domain.model.AnthropometricData
+import com.bclas.nutry.domain.model.NutritionalAnamnesisData
 import com.bclas.nutry.presentation.view.ui.screens.AssessmentFinalScreen
 import com.bclas.nutry.presentation.view.ui.screens.AnthropometricAssessmentScreen
 import com.bclas.nutry.presentation.view.ui.screens.HomeScreen
@@ -144,8 +146,8 @@ class MainActivity : ComponentActivity() {
                                         patientRegistrationViewModel.onAction(
                                             PatientRegistrationAction.SaveAssessmentForPatient(
                                                 patientId = selectedPatientId,
-                                                anamnesis = nutritionalAnamnesisViewModel.uiState,
-                                                anthropometric = anthropometricAssessmentViewModel.uiState
+                                                anamnesis = nutritionalAnamnesisViewModel.uiState.toDomain(),
+                                                anthropometric = anthropometricAssessmentViewModel.uiState.toDomain()
                                             )
                                         )
                                     }
@@ -189,6 +191,45 @@ fun HomeScreenPreview() {
             onNutritionalAnamnesisClick = {}
         )
     }
+}
+
+private fun NutritionalAnamnesisUiState.toDomain(): NutritionalAnamnesisData {
+    return NutritionalAnamnesisData(
+        patientGoal = patientGoal,
+        dietaryRoutine = dietaryRoutine,
+        dietaryPreferences = dietaryPreferences,
+        restrictions = restrictions,
+        intolerancesAndAllergies = intolerancesAndAllergies,
+        pathologies = pathologies,
+        medicationUse = medicationUse,
+        supplementation = supplementation,
+        waterIntake = waterIntake,
+        sleep = sleep,
+        intestinalFrequency = intestinalFrequency,
+        physicalActivityLevel = physicalActivityLevel
+    )
+}
+
+private fun AnthropometricAssessmentUiState.toDomain(): AnthropometricData {
+    return AnthropometricData(
+        weight = weight,
+        height = height,
+        age = age,
+        biologicalSex = biologicalSex,
+        activityLevel = activityLevel,
+        bmi = bmi,
+        abdominalCircumference = abdominalCircumference,
+        waistCircumference = waistCircumference,
+        hipCircumference = hipCircumference,
+        waistHipRatio = waistHipRatio,
+        skinfolds = skinfolds,
+        bodyFatPercentage = bodyFatPercentage,
+        leanMass = leanMass,
+        fatMass = fatMass,
+        basalMetabolicRate = basalMetabolicRate,
+        totalEnergyExpenditure = totalEnergyExpenditure,
+        bodyWater = bodyWater
+    )
 }
 
 @Preview(showBackground = true)

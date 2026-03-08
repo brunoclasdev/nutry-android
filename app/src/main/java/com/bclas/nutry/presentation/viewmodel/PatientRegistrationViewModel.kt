@@ -1,12 +1,15 @@
 package com.bclas.nutry.presentation.viewmodel
 
+import com.bclas.nutry.core.di.AppContainer
+import com.bclas.nutry.domain.model.AnthropometricData
+import com.bclas.nutry.domain.model.AttendanceHistoryItem
+import com.bclas.nutry.domain.model.NutritionalAnamnesisData
+import com.bclas.nutry.domain.model.Patient
+import com.bclas.nutry.domain.model.PatientDraft
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 data class AttendanceHistoryItemUiState(
     val id: Long,
@@ -29,8 +32,8 @@ data class RegisteredPatientUiState(
 data class PatientAssessmentRecordUiState(
     val id: Long,
     val createdAt: String,
-    val anamnesis: NutritionalAnamnesisUiState,
-    val anthropometric: AnthropometricAssessmentUiState
+    val anamnesis: NutritionalAnamnesisData,
+    val anthropometric: AnthropometricData
 )
 
 data class PatientRegistrationUiState(
@@ -60,20 +63,26 @@ sealed interface PatientRegistrationAction {
     data object SavePatient : PatientRegistrationAction
     data class SaveAssessmentForPatient(
         val patientId: Long,
-        val anamnesis: NutritionalAnamnesisUiState,
-        val anthropometric: AnthropometricAssessmentUiState
+        val anamnesis: NutritionalAnamnesisData,
+        val anthropometric: AnthropometricData
     ) : PatientRegistrationAction
     data object ClearForm : PatientRegistrationAction
     data object DismissSaveFeedback : PatientRegistrationAction
 }
 
 class PatientRegistrationViewModel : ViewModel() {
+    private val getPatientsUseCase = AppContainer.getPatientsUseCase
+    private val savePatientUseCase = AppContainer.savePatientUseCase
+    private val saveAssessmentForPatientUseCase = AppContainer.saveAssessmentForPatientUseCase
+
     var uiState by mutableStateOf(PatientRegistrationUiState())
         private set
 
     private var historyItemIdCounter = 1L
-    private var patientIdCounter = 1L
-    private var assessmentIdCounter = 1L
+
+    init {
+        refreshPatients()
+    }
 
     fun onAction(action: PatientRegistrationAction) {
         when (action) {
@@ -123,58 +132,50 @@ class PatientRegistrationViewModel : ViewModel() {
             }
 
             PatientRegistrationAction.SavePatient -> {
-                val name = uiState.fullName.trim()
-                if (name.isBlank()) {
+                val result = savePatientUseCase(
+                    PatientDraft(
+                        fullName = uiState.fullName,
+                        sex = uiState.sex,
+                        birthDate = uiState.birthDate,
+                        phone = uiState.phone,
+                        email = uiState.email,
+                        observations = uiState.observations,
+                        patientPhoto = uiState.patientPhoto,
+                        attendanceHistory = uiState.attendanceHistory.map {
+                            AttendanceHistoryItem(it.id, it.description)
+                        }
+                    )
+                )
+                if (result.isSuccess) {
+                    refreshPatients()
                     uiState = uiState.copy(
-                        saveFeedbackMessage = "Nao foi possivel salvar. Informe o nome completo.",
+                        fullName = "",
+                        sex = "",
+                        birthDate = "",
+                        phone = "",
+                        email = "",
+                        observations = "",
+                        patientPhoto = "",
+                        attendanceHistory = emptyList(),
+                        saveFeedbackMessage = "Cadastro realizado com sucesso.",
+                        saveFeedbackSuccess = true
+                    )
+                } else {
+                    val message = result.exceptionOrNull()?.message ?: "Nao foi possivel salvar."
+                    uiState = uiState.copy(
+                        saveFeedbackMessage = message,
                         saveFeedbackSuccess = false
                     )
-                    return
                 }
-                val registeredPatient = RegisteredPatientUiState(
-                    id = patientIdCounter++,
-                    fullName = name,
-                    sex = uiState.sex.trim(),
-                    birthDate = uiState.birthDate.trim(),
-                    phone = uiState.phone.trim(),
-                    email = uiState.email.trim(),
-                    observations = uiState.observations.trim(),
-                    patientPhoto = uiState.patientPhoto.trim(),
-                    attendanceHistory = uiState.attendanceHistory
-                )
-                uiState = uiState.copy(
-                    fullName = "",
-                    sex = "",
-                    birthDate = "",
-                    phone = "",
-                    email = "",
-                    observations = "",
-                    patientPhoto = "",
-                    attendanceHistory = emptyList(),
-                    registeredPatients = uiState.registeredPatients + registeredPatient,
-                    saveFeedbackMessage = "Cadastro realizado com sucesso.",
-                    saveFeedbackSuccess = true
-                )
             }
 
             is PatientRegistrationAction.SaveAssessmentForPatient -> {
-                val record = PatientAssessmentRecordUiState(
-                    id = assessmentIdCounter++,
-                    createdAt = nowFormatted(),
-                    anamnesis = action.anamnesis.copy(feedbackMessage = null),
-                    anthropometric = action.anthropometric.copy(feedbackMessage = null)
+                saveAssessmentForPatientUseCase(
+                    patientId = action.patientId,
+                    anamnesis = action.anamnesis,
+                    anthropometric = action.anthropometric
                 )
-                uiState = uiState.copy(
-                    registeredPatients = uiState.registeredPatients.map { patient ->
-                        if (patient.id == action.patientId) {
-                            patient.copy(
-                                assessmentHistory = patient.assessmentHistory + record
-                            )
-                        } else {
-                            patient
-                        }
-                    }
-                )
+                refreshPatients()
             }
 
             PatientRegistrationAction.ClearForm -> {
@@ -196,9 +197,34 @@ class PatientRegistrationViewModel : ViewModel() {
             }
         }
     }
+
+    private fun refreshPatients() {
+        uiState = uiState.copy(
+            registeredPatients = getPatientsUseCase().map { it.toUiState() }
+        )
+    }
 }
 
-private fun nowFormatted(): String {
-    val formatter = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-    return formatter.format(Date())
+private fun Patient.toUiState(): RegisteredPatientUiState {
+    return RegisteredPatientUiState(
+        id = id,
+        fullName = fullName,
+        sex = sex,
+        birthDate = birthDate,
+        phone = phone,
+        email = email,
+        observations = observations,
+        patientPhoto = patientPhoto,
+        attendanceHistory = attendanceHistory.map {
+            AttendanceHistoryItemUiState(it.id, it.description)
+        },
+        assessmentHistory = assessmentHistory.map {
+            PatientAssessmentRecordUiState(
+                id = it.id,
+                createdAt = it.createdAt,
+                anamnesis = it.anamnesis,
+                anthropometric = it.anthropometric
+            )
+        }
+    )
 }
