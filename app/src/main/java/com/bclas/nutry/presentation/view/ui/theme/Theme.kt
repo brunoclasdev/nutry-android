@@ -1,6 +1,5 @@
-package com.bclas.nutry.ui.theme
+package com.bclas.nutry.presentation.view.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
