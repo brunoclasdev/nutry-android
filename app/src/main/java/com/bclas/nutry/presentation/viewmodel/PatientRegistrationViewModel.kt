@@ -4,6 +4,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 data class AttendanceHistoryItemUiState(
     val id: Long,
@@ -16,7 +19,18 @@ data class RegisteredPatientUiState(
     val sex: String,
     val birthDate: String,
     val phone: String,
-    val email: String
+    val email: String,
+    val observations: String,
+    val patientPhoto: String,
+    val attendanceHistory: List<AttendanceHistoryItemUiState>,
+    val assessmentHistory: List<PatientAssessmentRecordUiState> = emptyList()
+)
+
+data class PatientAssessmentRecordUiState(
+    val id: Long,
+    val createdAt: String,
+    val anamnesis: NutritionalAnamnesisUiState,
+    val anthropometric: AnthropometricAssessmentUiState
 )
 
 data class PatientRegistrationUiState(
@@ -44,6 +58,11 @@ sealed interface PatientRegistrationAction {
     data class AddAttendanceHistory(val value: String) : PatientRegistrationAction
     data class RemoveAttendanceHistory(val id: Long) : PatientRegistrationAction
     data object SavePatient : PatientRegistrationAction
+    data class SaveAssessmentForPatient(
+        val patientId: Long,
+        val anamnesis: NutritionalAnamnesisUiState,
+        val anthropometric: AnthropometricAssessmentUiState
+    ) : PatientRegistrationAction
     data object ClearForm : PatientRegistrationAction
     data object DismissSaveFeedback : PatientRegistrationAction
 }
@@ -54,6 +73,7 @@ class PatientRegistrationViewModel : ViewModel() {
 
     private var historyItemIdCounter = 1L
     private var patientIdCounter = 1L
+    private var assessmentIdCounter = 1L
 
     fun onAction(action: PatientRegistrationAction) {
         when (action) {
@@ -117,7 +137,10 @@ class PatientRegistrationViewModel : ViewModel() {
                     sex = uiState.sex.trim(),
                     birthDate = uiState.birthDate.trim(),
                     phone = uiState.phone.trim(),
-                    email = uiState.email.trim()
+                    email = uiState.email.trim(),
+                    observations = uiState.observations.trim(),
+                    patientPhoto = uiState.patientPhoto.trim(),
+                    attendanceHistory = uiState.attendanceHistory
                 )
                 uiState = uiState.copy(
                     fullName = "",
@@ -131,6 +154,26 @@ class PatientRegistrationViewModel : ViewModel() {
                     registeredPatients = uiState.registeredPatients + registeredPatient,
                     saveFeedbackMessage = "Cadastro realizado com sucesso.",
                     saveFeedbackSuccess = true
+                )
+            }
+
+            is PatientRegistrationAction.SaveAssessmentForPatient -> {
+                val record = PatientAssessmentRecordUiState(
+                    id = assessmentIdCounter++,
+                    createdAt = nowFormatted(),
+                    anamnesis = action.anamnesis.copy(feedbackMessage = null),
+                    anthropometric = action.anthropometric.copy(feedbackMessage = null)
+                )
+                uiState = uiState.copy(
+                    registeredPatients = uiState.registeredPatients.map { patient ->
+                        if (patient.id == action.patientId) {
+                            patient.copy(
+                                assessmentHistory = patient.assessmentHistory + record
+                            )
+                        } else {
+                            patient
+                        }
+                    }
                 )
             }
 
@@ -153,4 +196,9 @@ class PatientRegistrationViewModel : ViewModel() {
             }
         }
     }
+}
+
+private fun nowFormatted(): String {
+    val formatter = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+    return formatter.format(Date())
 }

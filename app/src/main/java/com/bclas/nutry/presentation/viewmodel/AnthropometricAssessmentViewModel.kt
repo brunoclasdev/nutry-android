@@ -56,6 +56,7 @@ sealed interface AnthropometricAssessmentAction {
     data class RemoveProtocolField(val fieldId: Long) : AnthropometricAssessmentAction
     data object SaveAssessment : AnthropometricAssessmentAction
     data object CancelAssessment : AnthropometricAssessmentAction
+    data object ClearForm : AnthropometricAssessmentAction
     data object DismissFeedback : AnthropometricAssessmentAction
 }
 
@@ -174,6 +175,10 @@ class AnthropometricAssessmentViewModel : ViewModel() {
                 )
             }
 
+            AnthropometricAssessmentAction.ClearForm -> {
+                uiState = AnthropometricAssessmentUiState()
+            }
+
             AnthropometricAssessmentAction.DismissFeedback -> {
                 uiState = uiState.copy(feedbackMessage = null)
             }
@@ -231,20 +236,21 @@ class AnthropometricAssessmentViewModel : ViewModel() {
         age: String,
         sex: String
     ): String {
-        val manual = manualBodyFat.parseDecimal()
-        if (manual != null && manual > 0) return manual.formatTwoDecimals()
-
-        val folds = skinfolds.parseDecimal() ?: return ""
-        val ageValue = age.toIntOrNull() ?: return ""
-        if (folds <= 0 || ageValue <= 0) return ""
-
-        val density = when (sex.lowercase(Locale.ROOT)) {
-            "masculino" -> 1.10938 - (0.0008267 * folds) + (0.0000016 * folds * folds) - (0.0002574 * ageValue)
-            "feminino" -> 1.0994921 - (0.0009929 * folds) + (0.0000023 * folds * folds) - (0.0001392 * ageValue)
-            else -> return ""
+        val folds = skinfolds.parseDecimal()
+        val ageValue = age.toIntOrNull()
+        if (folds != null && ageValue != null && folds > 0 && ageValue > 0) {
+            val density = when (sex.lowercase(Locale.ROOT)) {
+                "masculino" -> 1.10938 - (0.0008267 * folds) + (0.0000016 * folds * folds) - (0.0002574 * ageValue)
+                "feminino" -> 1.0994921 - (0.0009929 * folds) + (0.0000023 * folds * folds) - (0.0001392 * ageValue)
+                else -> return ""
+            }
+            if (density <= 0.0) return ""
+            return ((495.0 / density) - 450.0).formatTwoDecimals()
         }
-        if (density <= 0.0) return ""
-        return ((495.0 / density) - 450.0).formatTwoDecimals()
+
+        val manual = manualBodyFat.parseDecimal() ?: return ""
+        if (manual <= 0) return ""
+        return manual.formatTwoDecimals()
     }
 
     private fun calculateFatMass(weight: String, bodyFatPercentage: String): String {

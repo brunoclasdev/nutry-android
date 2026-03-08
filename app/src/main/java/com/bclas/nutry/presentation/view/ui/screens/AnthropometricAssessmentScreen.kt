@@ -1,5 +1,6 @@
 package com.bclas.nutry.presentation.view.ui.screens
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -38,12 +39,14 @@ import com.bclas.nutry.presentation.viewmodel.AnthropometricAssessmentAction
 import com.bclas.nutry.presentation.viewmodel.AnthropometricAssessmentUiState
 import com.bclas.nutry.presentation.viewmodel.ProtocolFieldUiState
 
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnthropometricAssessmentScreen(
     state: AnthropometricAssessmentUiState,
     onAction: (AnthropometricAssessmentAction) -> Unit,
     onBackClick: () -> Unit = {},
+    onFinishClick: () -> Unit = {},
     patientName: String? = null,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp)
@@ -61,9 +64,11 @@ fun AnthropometricAssessmentScreen(
             text = { Text("Deseja salvar esta avaliacao antropometrica?") },
             confirmButton = {
                 TextButton(onClick = {
+                    val canFinish = state.weight.isNotBlank() && state.height.isNotBlank()
                     onAction(AnthropometricAssessmentAction.SaveAssessment)
+                    if (canFinish) onFinishClick()
                     showSaveConfirmation = false
-                }) { Text("Salvar") }
+                }) { Text("Salvar e finalizar") }
             },
             dismissButton = {
                 TextButton(onClick = { showSaveConfirmation = false }) { Text("Voltar") }
@@ -418,7 +423,7 @@ fun AnthropometricAssessmentScreen(
                         onClick = { showSaveConfirmation = true },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Salvar")
+                        Text("Salvar e finalizar")
                     }
                 }
             )

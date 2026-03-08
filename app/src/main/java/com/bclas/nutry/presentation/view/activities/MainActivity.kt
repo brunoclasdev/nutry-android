@@ -10,9 +10,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bclas.nutry.presentation.view.ui.screens.AssessmentFinalScreen
 import com.bclas.nutry.presentation.view.ui.screens.AnthropometricAssessmentScreen
 import com.bclas.nutry.presentation.view.ui.screens.HomeScreen
 import com.bclas.nutry.presentation.view.ui.screens.NutritionalAnamnesisScreen
+import com.bclas.nutry.presentation.view.ui.screens.PatientHistoryScreen
 import com.bclas.nutry.presentation.view.ui.screens.PatientListScreen
 import com.bclas.nutry.presentation.view.ui.screens.PatientRegistrationScreen
 import com.bclas.nutry.presentation.view.ui.theme.NutryTheme
@@ -23,9 +25,11 @@ import com.bclas.nutry.presentation.viewmodel.MainViewModel
 import com.bclas.nutry.presentation.viewmodel.NutryScreen
 import com.bclas.nutry.presentation.viewmodel.NutritionalAnamnesisUiState
 import com.bclas.nutry.presentation.viewmodel.NutritionalAnamnesisViewModel
+import com.bclas.nutry.presentation.viewmodel.NutritionalAnamnesisAction
 import com.bclas.nutry.presentation.viewmodel.PatientRegistrationUiState
 import com.bclas.nutry.presentation.viewmodel.PatientRegistrationAction
 import com.bclas.nutry.presentation.viewmodel.PatientRegistrationViewModel
+import com.bclas.nutry.presentation.viewmodel.AnthropometricAssessmentAction
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,6 +42,8 @@ class MainActivity : ComponentActivity() {
                     val anthropometricAssessmentViewModel: AnthropometricAssessmentViewModel = viewModel()
                     val patientRegistrationViewModel: PatientRegistrationViewModel = viewModel()
                     val nutritionalAnamnesisViewModel: NutritionalAnamnesisViewModel = viewModel()
+                    val selectedPatient = patientRegistrationViewModel.uiState.registeredPatients
+                        .firstOrNull { it.id == mainViewModel.uiState.selectedPatientId }
 
                     when (mainViewModel.uiState.currentScreen) {
                         NutryScreen.HOME -> {
@@ -50,9 +56,11 @@ class MainActivity : ComponentActivity() {
                                     mainViewModel.onAction(MainAction.NavigateTo(NutryScreen.PATIENT_LIST))
                                 },
                                 onAnthropometricAssessmentClick = {
+                                    anthropometricAssessmentViewModel.onAction(AnthropometricAssessmentAction.ClearForm)
                                     mainViewModel.onAction(MainAction.NavigateTo(NutryScreen.ANTHROPOMETRIC_ASSESSMENT))
                                 },
                                 onNutritionalAnamnesisClick = {
+                                    nutritionalAnamnesisViewModel.onAction(NutritionalAnamnesisAction.ClearForm)
                                     mainViewModel.onAction(MainAction.NavigateTo(NutryScreen.NUTRITIONAL_ANAMNESIS))
                                 },
                                 modifier = Modifier.fillMaxSize(),
@@ -82,9 +90,40 @@ class MainActivity : ComponentActivity() {
                                 patients = patientRegistrationViewModel.uiState.registeredPatients,
                                 onBackClick = { mainViewModel.onAction(MainAction.NavigateBackHome) },
                                 onNewAssessmentClick = { patient ->
+                                    nutritionalAnamnesisViewModel.onAction(NutritionalAnamnesisAction.ClearForm)
+                                    anthropometricAssessmentViewModel.onAction(AnthropometricAssessmentAction.ClearForm)
                                     mainViewModel.onAction(
-                                        MainAction.StartPatientAssessment(patient.fullName)
+                                        MainAction.StartPatientAssessment(patient.id)
                                     )
+                                },
+                                onViewHistoryClick = { patient ->
+                                    mainViewModel.onAction(MainAction.ViewPatientHistory(patient.id))
+                                },
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = innerPadding
+                            )
+                        }
+
+                        NutryScreen.PATIENT_HISTORY -> {
+                            PatientHistoryScreen(
+                                patient = selectedPatient,
+                                onBackClick = { mainViewModel.onAction(MainAction.NavigateTo(NutryScreen.PATIENT_LIST)) },
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = innerPadding
+                            )
+                        }
+
+                        NutryScreen.NUTRITIONAL_ANAMNESIS -> {
+                            NutritionalAnamnesisScreen(
+                                state = nutritionalAnamnesisViewModel.uiState,
+                                onAction = nutritionalAnamnesisViewModel::onAction,
+                                onBackClick = {
+                                    nutritionalAnamnesisViewModel.onAction(NutritionalAnamnesisAction.ClearForm)
+                                    anthropometricAssessmentViewModel.onAction(AnthropometricAssessmentAction.ClearForm)
+                                    mainViewModel.onAction(MainAction.NavigateTo(NutryScreen.PATIENT_LIST))
+                                },
+                                onProceedClick = {
+                                    mainViewModel.onAction(MainAction.ContinueToAnthropometricAssessment)
                                 },
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = innerPadding
@@ -95,18 +134,39 @@ class MainActivity : ComponentActivity() {
                             AnthropometricAssessmentScreen(
                                 state = anthropometricAssessmentViewModel.uiState,
                                 onAction = anthropometricAssessmentViewModel::onAction,
-                                onBackClick = { mainViewModel.onAction(MainAction.NavigateBackHome) },
-                                patientName = mainViewModel.uiState.selectedPatientName,
+                                onBackClick = {
+                                    anthropometricAssessmentViewModel.onAction(AnthropometricAssessmentAction.ClearForm)
+                                    mainViewModel.onAction(MainAction.NavigateTo(NutryScreen.PATIENT_LIST))
+                                },
+                                onFinishClick = {
+                                    val selectedPatientId = mainViewModel.uiState.selectedPatientId
+                                    if (selectedPatientId != null) {
+                                        patientRegistrationViewModel.onAction(
+                                            PatientRegistrationAction.SaveAssessmentForPatient(
+                                                patientId = selectedPatientId,
+                                                anamnesis = nutritionalAnamnesisViewModel.uiState,
+                                                anthropometric = anthropometricAssessmentViewModel.uiState
+                                            )
+                                        )
+                                    }
+                                    mainViewModel.onAction(MainAction.FinishAssessment)
+                                },
+                                patientName = selectedPatient?.fullName,
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = innerPadding
                             )
                         }
 
-                        NutryScreen.NUTRITIONAL_ANAMNESIS -> {
-                            NutritionalAnamnesisScreen(
-                                state = nutritionalAnamnesisViewModel.uiState,
-                                onAction = nutritionalAnamnesisViewModel::onAction,
-                                onBackClick = { mainViewModel.onAction(MainAction.NavigateBackHome) },
+                        NutryScreen.ASSESSMENT_FINAL -> {
+                            AssessmentFinalScreen(
+                                patient = selectedPatient,
+                                anamnesis = nutritionalAnamnesisViewModel.uiState,
+                                anthropometric = anthropometricAssessmentViewModel.uiState,
+                                onBackHomeClick = {
+                                    nutritionalAnamnesisViewModel.onAction(NutritionalAnamnesisAction.ClearForm)
+                                    anthropometricAssessmentViewModel.onAction(AnthropometricAssessmentAction.ClearForm)
+                                    mainViewModel.onAction(MainAction.NavigateBackHome)
+                                },
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = innerPadding
                             )
@@ -163,7 +223,8 @@ fun NutritionalAnamnesisPreview() {
         NutritionalAnamnesisScreen(
             state = NutritionalAnamnesisUiState(),
             onAction = {},
-            onBackClick = {}
+            onBackClick = {},
+            onProceedClick = {}
         )
     }
 }

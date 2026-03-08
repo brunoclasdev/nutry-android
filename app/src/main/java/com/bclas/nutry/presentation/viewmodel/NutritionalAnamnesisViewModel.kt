@@ -37,6 +37,7 @@ sealed interface NutritionalAnamnesisAction {
     data class PhysicalActivityLevelChanged(val value: String) : NutritionalAnamnesisAction
     data object SaveAnamnesis : NutritionalAnamnesisAction
     data object CancelAnamnesis : NutritionalAnamnesisAction
+    data object ClearForm : NutritionalAnamnesisAction
     data object DismissFeedback : NutritionalAnamnesisAction
 }
 
@@ -113,6 +114,10 @@ class NutritionalAnamnesisViewModel : ViewModel() {
                     feedbackMessage = "Anamnese cancelada e formulario limpo.",
                     feedbackSuccess = true
                 )
+            }
+
+            NutritionalAnamnesisAction.ClearForm -> {
+                uiState = NutritionalAnamnesisUiState()
             }
 
             NutritionalAnamnesisAction.DismissFeedback -> {

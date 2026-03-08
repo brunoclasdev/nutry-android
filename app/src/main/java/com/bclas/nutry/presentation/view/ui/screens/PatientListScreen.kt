@@ -30,6 +30,7 @@ fun PatientListScreen(
     patients: List<RegisteredPatientUiState>,
     onBackClick: () -> Unit,
     onNewAssessmentClick: (RegisteredPatientUiState) -> Unit,
+    onViewHistoryClick: (RegisteredPatientUiState) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
@@ -70,7 +71,8 @@ fun PatientListScreen(
                     items(patients, key = { it.id }) { patient ->
                         PatientCard(
                             patient = patient,
-                            onNewAssessmentClick = { onNewAssessmentClick(patient) }
+                            onNewAssessmentClick = { onNewAssessmentClick(patient) },
+                            onViewHistoryClick = { onViewHistoryClick(patient) }
                         )
                     }
                 }
@@ -81,7 +83,8 @@ fun PatientListScreen(
                     items(patients, key = { it.id }) { patient ->
                         PatientCard(
                             patient = patient,
-                            onNewAssessmentClick = { onNewAssessmentClick(patient) }
+                            onNewAssessmentClick = { onNewAssessmentClick(patient) },
+                            onViewHistoryClick = { onViewHistoryClick(patient) }
                         )
                     }
                 }
@@ -93,7 +96,8 @@ fun PatientListScreen(
 @Composable
 private fun PatientCard(
     patient: RegisteredPatientUiState,
-    onNewAssessmentClick: () -> Unit
+    onNewAssessmentClick: () -> Unit,
+    onViewHistoryClick: () -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -120,9 +124,12 @@ private fun PatientCard(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                TextButton(onClick = onViewHistoryClick) {
+                    Text("Ver historico")
+                }
                 Button(onClick = onNewAssessmentClick) {
                     Text("Nova avaliacao")
                 }
