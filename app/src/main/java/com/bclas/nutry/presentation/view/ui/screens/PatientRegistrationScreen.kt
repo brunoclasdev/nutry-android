@@ -2,15 +2,17 @@ package com.bclas.nutry.presentation.view.ui.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -26,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,7 +42,6 @@ import androidx.compose.ui.unit.dp
 import com.bclas.nutry.presentation.viewmodel.AttendanceHistoryItemUiState
 import com.bclas.nutry.presentation.viewmodel.PatientRegistrationAction
 import com.bclas.nutry.presentation.viewmodel.PatientRegistrationUiState
-import androidx.compose.material3.rememberDatePickerState
 import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,6 +66,7 @@ fun PatientRegistrationScreen(
             onAction(PatientRegistrationAction.PatientPhotoChanged(uri.toString()))
         }
     }
+
     if (showBirthDatePicker) {
         DatePickerDialog(
             onDismissRequest = { showBirthDatePicker = false },
@@ -96,6 +99,7 @@ fun PatientRegistrationScreen(
             DatePicker(state = datePickerState)
         }
     }
+
     state.saveFeedbackMessage?.let { message ->
         AlertDialog(
             onDismissRequest = {
@@ -117,189 +121,236 @@ fun PatientRegistrationScreen(
         )
     }
 
-    Column(
+    BoxWithConstraints(
         modifier = modifier
             .verticalScroll(rememberScrollState())
             .padding(contentPadding)
-            .padding(horizontal = 16.dp, vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 16.dp, vertical = 20.dp)
     ) {
-        TextButton(onClick = onBackClick) {
-            Text("Voltar")
-        }
+        val isTablet = maxWidth >= 840.dp
 
-        Text(
-            text = "Cadastro de pacientes",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Pacientes cadastrados: ${state.registeredPatients.size}",
-            style = MaterialTheme.typography.bodyMedium
-        )
-
-        OutlinedTextField(
-            modifier = Modifier.fillMaxWidth(),
-            value = state.fullName,
-            onValueChange = { onAction(PatientRegistrationAction.FullNameChanged(it)) },
-            label = { Text("Nome completo") },
-            singleLine = true
-        )
-
-        ExposedDropdownMenuBox(
-            expanded = sexMenuExpanded,
-            onExpandedChange = { sexMenuExpanded = !sexMenuExpanded }
-        ) {
-            OutlinedTextField(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(),
-                value = state.sex,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Sexo") },
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = sexMenuExpanded)
-                },
-                singleLine = true
-            )
-            ExposedDropdownMenu(
-                expanded = sexMenuExpanded,
-                onDismissRequest = { sexMenuExpanded = false }
-            ) {
-                listOf("Masculino", "Feminino").forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option) },
-                        onClick = {
-                            onAction(PatientRegistrationAction.SexChanged(option))
-                            sexMenuExpanded = false
-                        }
-                    )
-                }
-            }
-        }
-
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable {
-                    showBirthDatePicker = true
-                }
+                .widthIn(max = if (isTablet) 980.dp else 560.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            TextButton(onClick = onBackClick) {
+                Text("Voltar")
+            }
+
+            Text(
+                text = "Cadastro de pacientes",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Pacientes cadastrados: ${state.registeredPatients.size}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            AdaptiveFieldRow(
+                isTablet = isTablet,
+                first = {
+                    OutlinedTextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = state.fullName,
+                        onValueChange = { onAction(PatientRegistrationAction.FullNameChanged(it)) },
+                        label = { Text("Nome completo") },
+                        singleLine = true
+                    )
+                },
+                second = {
+                    ExposedDropdownMenuBox(
+                        expanded = sexMenuExpanded,
+                        onExpandedChange = { sexMenuExpanded = !sexMenuExpanded }
+                    ) {
+                        OutlinedTextField(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(),
+                            value = state.sex,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Sexo") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = sexMenuExpanded)
+                            },
+                            singleLine = true
+                        )
+                        ExposedDropdownMenu(
+                            expanded = sexMenuExpanded,
+                            onDismissRequest = { sexMenuExpanded = false }
+                        ) {
+                            listOf("Masculino", "Feminino").forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        onAction(PatientRegistrationAction.SexChanged(option))
+                                        sexMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            )
+
+            AdaptiveFieldRow(
+                isTablet = isTablet,
+                first = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showBirthDatePicker = true }
+                    ) {
+                        OutlinedTextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            value = state.birthDate,
+                            onValueChange = {},
+                            enabled = false,
+                            label = { Text("Data de nascimento") },
+                            placeholder = { Text("Toque para selecionar") },
+                            singleLine = true
+                        )
+                    }
+                },
+                second = {
+                    OutlinedTextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = state.phone,
+                        onValueChange = { onAction(PatientRegistrationAction.PhoneChanged(it)) },
+                        label = { Text("Telefone") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                    )
+                }
+            )
+
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
-                value = state.birthDate,
+                value = state.email,
+                onValueChange = { onAction(PatientRegistrationAction.EmailChanged(it)) },
+                label = { Text("E-mail") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+            )
+
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = state.observations,
+                onValueChange = { onAction(PatientRegistrationAction.ObservationsChanged(it)) },
+                label = { Text("Observacoes") },
+                minLines = if (isTablet) 4 else 3
+            )
+
+            Text(
+                text = "Foto do paciente",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = state.patientPhoto,
                 onValueChange = {},
-                enabled = false,
-                label = { Text("Data de nascimento") },
-                placeholder = { Text("Toque para selecionar") },
+                readOnly = true,
+                label = { Text("Foto selecionada") },
                 singleLine = true
             )
-        }
-
-        OutlinedTextField(
-            modifier = Modifier.fillMaxWidth(),
-            value = state.phone,
-            onValueChange = { onAction(PatientRegistrationAction.PhoneChanged(it)) },
-            label = { Text("Telefone") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
-        )
-
-        OutlinedTextField(
-            modifier = Modifier.fillMaxWidth(),
-            value = state.email,
-            onValueChange = { onAction(PatientRegistrationAction.EmailChanged(it)) },
-            label = { Text("E-mail") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
-        )
-
-        OutlinedTextField(
-            modifier = Modifier.fillMaxWidth(),
-            value = state.observations,
-            onValueChange = { onAction(PatientRegistrationAction.ObservationsChanged(it)) },
-            label = { Text("Observacoes") },
-            minLines = 3
-        )
-
-        Text(
-            text = "Foto do paciente",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-        OutlinedTextField(
-            modifier = Modifier.fillMaxWidth(),
-            value = state.patientPhoto,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Foto selecionada") },
-            singleLine = true
-        )
-        Button(
-            onClick = { photoPickerLauncher.launch("image/*") },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Escolher foto da galeria")
-        }
-
-        HorizontalDivider(modifier = Modifier.fillMaxWidth())
-
-        Text(
-            text = "Historico de atendimentos",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedTextField(
-                modifier = Modifier.weight(1f),
-                value = newHistoryItem,
-                onValueChange = { newHistoryItem = it },
-                label = { Text("Novo atendimento") },
-                minLines = 2
-            )
-            Button(onClick = {
-                onAction(PatientRegistrationAction.AddAttendanceHistory(newHistoryItem))
-                newHistoryItem = ""
-            }) {
-                Text("Adicionar")
+            Button(
+                onClick = { photoPickerLauncher.launch("image/*") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Escolher foto da galeria")
             }
-        }
 
-        state.attendanceHistory.forEach { item ->
-            AttendanceHistoryItem(
-                item = item,
-                onRemove = {
-                    onAction(PatientRegistrationAction.RemoveAttendanceHistory(item.id))
+            HorizontalDivider(modifier = Modifier.fillMaxWidth())
+
+            Text(
+                text = "Historico de atendimentos",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    modifier = Modifier.weight(1f),
+                    value = newHistoryItem,
+                    onValueChange = { newHistoryItem = it },
+                    label = { Text("Novo atendimento") },
+                    minLines = 2
+                )
+                Button(onClick = {
+                    onAction(PatientRegistrationAction.AddAttendanceHistory(newHistoryItem))
+                    newHistoryItem = ""
+                }) {
+                    Text("Adicionar")
+                }
+            }
+
+            state.attendanceHistory.forEach { item ->
+                AttendanceHistoryItem(
+                    item = item,
+                    onRemove = {
+                        onAction(PatientRegistrationAction.RemoveAttendanceHistory(item.id))
+                    }
+                )
+            }
+
+            HorizontalDivider(modifier = Modifier.fillMaxWidth())
+
+            AdaptiveFieldRow(
+                isTablet = isTablet,
+                first = {
+                    Button(
+                        onClick = { onAction(PatientRegistrationAction.SavePatient) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Salvar paciente")
+                    }
+                },
+                second = {
+                    Button(
+                        onClick = onViewPatientsClick,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Ver pacientes cadastrados")
+                    }
                 }
             )
-        }
 
-        HorizontalDivider(modifier = Modifier.fillMaxWidth())
+            TextButton(
+                onClick = { onAction(PatientRegistrationAction.ClearForm) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Limpar formulario")
+            }
+        }
+    }
+}
 
-        Button(
-            onClick = { onAction(PatientRegistrationAction.SavePatient) },
-            modifier = Modifier.fillMaxWidth()
+@Composable
+private fun AdaptiveFieldRow(
+    isTablet: Boolean,
+    first: @Composable () -> Unit,
+    second: @Composable () -> Unit
+) {
+    if (isTablet) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top
         ) {
-            Text("Salvar paciente")
+            Box(modifier = Modifier.weight(1f)) { first() }
+            Box(modifier = Modifier.weight(1f)) { second() }
         }
-        Button(
-            onClick = onViewPatientsClick,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Ver pacientes cadastrados")
-        }
-        TextButton(
-            onClick = { onAction(PatientRegistrationAction.ClearForm) },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Limpar formulario")
-        }
+    } else {
+        first()
+        second()
     }
 }
 

@@ -1,10 +1,14 @@
 package com.bclas.nutry.presentation.view.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -12,6 +16,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -26,83 +31,163 @@ fun NutritionalAnamnesisScreen(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
-    Column(
+    BoxWithConstraints(
         modifier = modifier
             .verticalScroll(rememberScrollState())
             .padding(contentPadding)
-            .padding(horizontal = 16.dp, vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 16.dp, vertical = 20.dp)
     ) {
-        TextButton(onClick = onBackClick) {
-            Text("Voltar")
+        val isTablet = maxWidth >= 840.dp
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = if (isTablet) 980.dp else 560.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            TextButton(onClick = onBackClick) {
+                Text("Voltar")
+            }
+
+            Text(
+                text = "Anamnese nutricional",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            AdaptiveFieldRow(
+                isTablet = isTablet,
+                first = {
+                    AnamnesisField(
+                        label = "Objetivo do paciente",
+                        value = state.patientGoal,
+                        onValueChange = { onAction(NutritionalAnamnesisAction.PatientGoalChanged(it)) }
+                    )
+                },
+                second = {
+                    AnamnesisField(
+                        label = "Rotina alimentar",
+                        value = state.dietaryRoutine,
+                        onValueChange = { onAction(NutritionalAnamnesisAction.DietaryRoutineChanged(it)) }
+                    )
+                }
+            )
+
+            AdaptiveFieldRow(
+                isTablet = isTablet,
+                first = {
+                    AnamnesisField(
+                        label = "Preferencias alimentares",
+                        value = state.dietaryPreferences,
+                        onValueChange = { onAction(NutritionalAnamnesisAction.DietaryPreferencesChanged(it)) }
+                    )
+                },
+                second = {
+                    AnamnesisField(
+                        label = "Restricoes",
+                        value = state.restrictions,
+                        onValueChange = { onAction(NutritionalAnamnesisAction.RestrictionsChanged(it)) }
+                    )
+                }
+            )
+
+            AdaptiveFieldRow(
+                isTablet = isTablet,
+                first = {
+                    AnamnesisField(
+                        label = "Intolerancias e alergias",
+                        value = state.intolerancesAndAllergies,
+                        onValueChange = {
+                            onAction(NutritionalAnamnesisAction.IntolerancesAndAllergiesChanged(it))
+                        }
+                    )
+                },
+                second = {
+                    AnamnesisField(
+                        label = "Patologias",
+                        value = state.pathologies,
+                        onValueChange = { onAction(NutritionalAnamnesisAction.PathologiesChanged(it)) }
+                    )
+                }
+            )
+
+            AdaptiveFieldRow(
+                isTablet = isTablet,
+                first = {
+                    AnamnesisField(
+                        label = "Uso de medicamentos",
+                        value = state.medicationUse,
+                        onValueChange = { onAction(NutritionalAnamnesisAction.MedicationUseChanged(it)) }
+                    )
+                },
+                second = {
+                    AnamnesisField(
+                        label = "Suplementacao",
+                        value = state.supplementation,
+                        onValueChange = { onAction(NutritionalAnamnesisAction.SupplementationChanged(it)) }
+                    )
+                }
+            )
+
+            AdaptiveFieldRow(
+                isTablet = isTablet,
+                first = {
+                    AnamnesisField(
+                        label = "Ingestao hidrica",
+                        value = state.waterIntake,
+                        onValueChange = { onAction(NutritionalAnamnesisAction.WaterIntakeChanged(it)) }
+                    )
+                },
+                second = {
+                    AnamnesisField(
+                        label = "Sono",
+                        value = state.sleep,
+                        onValueChange = { onAction(NutritionalAnamnesisAction.SleepChanged(it)) }
+                    )
+                }
+            )
+
+            AdaptiveFieldRow(
+                isTablet = isTablet,
+                first = {
+                    AnamnesisField(
+                        label = "Frequencia intestinal",
+                        value = state.intestinalFrequency,
+                        onValueChange = { onAction(NutritionalAnamnesisAction.IntestinalFrequencyChanged(it)) }
+                    )
+                },
+                second = {
+                    AnamnesisField(
+                        label = "Nivel de atividade fisica",
+                        value = state.physicalActivityLevel,
+                        onValueChange = {
+                            onAction(NutritionalAnamnesisAction.PhysicalActivityLevelChanged(it))
+                        }
+                    )
+                }
+            )
         }
+    }
+}
 
-        Text(
-            text = "Anamnese nutricional",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-
-        AnamnesisField(
-            label = "Objetivo do paciente",
-            value = state.patientGoal,
-            onValueChange = { onAction(NutritionalAnamnesisAction.PatientGoalChanged(it)) }
-        )
-        AnamnesisField(
-            label = "Rotina alimentar",
-            value = state.dietaryRoutine,
-            onValueChange = { onAction(NutritionalAnamnesisAction.DietaryRoutineChanged(it)) }
-        )
-        AnamnesisField(
-            label = "Preferencias alimentares",
-            value = state.dietaryPreferences,
-            onValueChange = { onAction(NutritionalAnamnesisAction.DietaryPreferencesChanged(it)) }
-        )
-        AnamnesisField(
-            label = "Restricoes",
-            value = state.restrictions,
-            onValueChange = { onAction(NutritionalAnamnesisAction.RestrictionsChanged(it)) }
-        )
-        AnamnesisField(
-            label = "Intolerancias e alergias",
-            value = state.intolerancesAndAllergies,
-            onValueChange = { onAction(NutritionalAnamnesisAction.IntolerancesAndAllergiesChanged(it)) }
-        )
-        AnamnesisField(
-            label = "Patologias",
-            value = state.pathologies,
-            onValueChange = { onAction(NutritionalAnamnesisAction.PathologiesChanged(it)) }
-        )
-        AnamnesisField(
-            label = "Uso de medicamentos",
-            value = state.medicationUse,
-            onValueChange = { onAction(NutritionalAnamnesisAction.MedicationUseChanged(it)) }
-        )
-        AnamnesisField(
-            label = "Suplementacao",
-            value = state.supplementation,
-            onValueChange = { onAction(NutritionalAnamnesisAction.SupplementationChanged(it)) }
-        )
-        AnamnesisField(
-            label = "Ingestao hidrica",
-            value = state.waterIntake,
-            onValueChange = { onAction(NutritionalAnamnesisAction.WaterIntakeChanged(it)) }
-        )
-        AnamnesisField(
-            label = "Sono",
-            value = state.sleep,
-            onValueChange = { onAction(NutritionalAnamnesisAction.SleepChanged(it)) }
-        )
-        AnamnesisField(
-            label = "Frequencia intestinal",
-            value = state.intestinalFrequency,
-            onValueChange = { onAction(NutritionalAnamnesisAction.IntestinalFrequencyChanged(it)) }
-        )
-        AnamnesisField(
-            label = "Nivel de atividade fisica",
-            value = state.physicalActivityLevel,
-            onValueChange = { onAction(NutritionalAnamnesisAction.PhysicalActivityLevelChanged(it)) }
-        )
+@Composable
+private fun AdaptiveFieldRow(
+    isTablet: Boolean,
+    first: @Composable () -> Unit,
+    second: @Composable () -> Unit
+) {
+    if (isTablet) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Box(modifier = Modifier.weight(1f)) { first() }
+            Box(modifier = Modifier.weight(1f)) { second() }
+        }
+    } else {
+        first()
+        second()
     }
 }
 
