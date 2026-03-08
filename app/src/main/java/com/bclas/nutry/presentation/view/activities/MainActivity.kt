@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bclas.nutry.core.di.AppContainer
 import com.bclas.nutry.domain.model.AnthropometricData
 import com.bclas.nutry.domain.model.NutritionalAnamnesisData
 import com.bclas.nutry.presentation.view.ui.screens.AssessmentFinalScreen
@@ -36,6 +37,7 @@ import com.bclas.nutry.presentation.viewmodel.AnthropometricAssessmentAction
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppContainer.initialize(applicationContext)
         enableEdgeToEdge()
         setContent {
             NutryTheme {
