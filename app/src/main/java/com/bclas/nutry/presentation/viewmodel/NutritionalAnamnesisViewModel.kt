@@ -17,7 +17,9 @@ data class NutritionalAnamnesisUiState(
     val waterIntake: String = "",
     val sleep: String = "",
     val intestinalFrequency: String = "",
-    val physicalActivityLevel: String = ""
+    val physicalActivityLevel: String = "",
+    val feedbackMessage: String? = null,
+    val feedbackSuccess: Boolean = false
 )
 
 sealed interface NutritionalAnamnesisAction {
@@ -33,6 +35,9 @@ sealed interface NutritionalAnamnesisAction {
     data class SleepChanged(val value: String) : NutritionalAnamnesisAction
     data class IntestinalFrequencyChanged(val value: String) : NutritionalAnamnesisAction
     data class PhysicalActivityLevelChanged(val value: String) : NutritionalAnamnesisAction
+    data object SaveAnamnesis : NutritionalAnamnesisAction
+    data object CancelAnamnesis : NutritionalAnamnesisAction
+    data object DismissFeedback : NutritionalAnamnesisAction
 }
 
 class NutritionalAnamnesisViewModel : ViewModel() {
@@ -87,6 +92,31 @@ class NutritionalAnamnesisViewModel : ViewModel() {
 
             is NutritionalAnamnesisAction.PhysicalActivityLevelChanged -> {
                 uiState = uiState.copy(physicalActivityLevel = action.value)
+            }
+
+            NutritionalAnamnesisAction.SaveAnamnesis -> {
+                if (uiState.patientGoal.isBlank() && uiState.dietaryRoutine.isBlank()) {
+                    uiState = uiState.copy(
+                        feedbackMessage = "Nao foi possivel salvar. Preencha objetivo ou rotina alimentar.",
+                        feedbackSuccess = false
+                    )
+                } else {
+                    uiState = uiState.copy(
+                        feedbackMessage = "Anamnese nutricional salva com sucesso.",
+                        feedbackSuccess = true
+                    )
+                }
+            }
+
+            NutritionalAnamnesisAction.CancelAnamnesis -> {
+                uiState = NutritionalAnamnesisUiState(
+                    feedbackMessage = "Anamnese cancelada e formulario limpo.",
+                    feedbackSuccess = true
+                )
+            }
+
+            NutritionalAnamnesisAction.DismissFeedback -> {
+                uiState = uiState.copy(feedbackMessage = null)
             }
         }
     }

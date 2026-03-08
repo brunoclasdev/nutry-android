@@ -12,7 +12,12 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -33,6 +38,7 @@ import com.bclas.nutry.presentation.viewmodel.AnthropometricAssessmentAction
 import com.bclas.nutry.presentation.viewmodel.AnthropometricAssessmentUiState
 import com.bclas.nutry.presentation.viewmodel.ProtocolFieldUiState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnthropometricAssessmentScreen(
     state: AnthropometricAssessmentUiState,
@@ -43,6 +49,57 @@ fun AnthropometricAssessmentScreen(
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     var protocolFieldName by rememberSaveable { mutableStateOf("") }
+    var showSaveConfirmation by rememberSaveable { mutableStateOf(false) }
+    var showCancelConfirmation by rememberSaveable { mutableStateOf(false) }
+    var sexMenuExpanded by rememberSaveable { mutableStateOf(false) }
+    var activityMenuExpanded by rememberSaveable { mutableStateOf(false) }
+
+    if (showSaveConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showSaveConfirmation = false },
+            title = { Text("Confirmar salvamento") },
+            text = { Text("Deseja salvar esta avaliacao antropometrica?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onAction(AnthropometricAssessmentAction.SaveAssessment)
+                    showSaveConfirmation = false
+                }) { Text("Salvar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSaveConfirmation = false }) { Text("Voltar") }
+            }
+        )
+    }
+    if (showCancelConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showCancelConfirmation = false },
+            title = { Text("Confirmar cancelamento") },
+            text = { Text("Deseja cancelar? Os dados preenchidos serao limpos.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onAction(AnthropometricAssessmentAction.CancelAssessment)
+                    showCancelConfirmation = false
+                }) { Text("Confirmar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelConfirmation = false }) { Text("Voltar") }
+            }
+        )
+    }
+    state.feedbackMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { onAction(AnthropometricAssessmentAction.DismissFeedback) },
+            title = {
+                Text(if (state.feedbackSuccess) "Operacao concluida" else "Falha")
+            },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { onAction(AnthropometricAssessmentAction.DismissFeedback) }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
 
     BoxWithConstraints(
         modifier = modifier
@@ -99,6 +156,50 @@ fun AnthropometricAssessmentScreen(
             AdaptiveFieldRow(
                 isTablet = isTablet,
                 first = {
+                    AssessmentNumberField(
+                        label = "Idade (anos)",
+                        value = state.age,
+                        onValueChange = { onAction(AnthropometricAssessmentAction.AgeChanged(it)) }
+                    )
+                },
+                second = {
+                    ExposedDropdownMenuBox(
+                        expanded = sexMenuExpanded,
+                        onExpandedChange = { sexMenuExpanded = !sexMenuExpanded }
+                    ) {
+                        OutlinedTextField(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(),
+                            value = state.biologicalSex,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Sexo biológico") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = sexMenuExpanded)
+                            }
+                        )
+                        ExposedDropdownMenu(
+                            expanded = sexMenuExpanded,
+                            onDismissRequest = { sexMenuExpanded = false }
+                        ) {
+                            listOf("Masculino", "Feminino").forEach { sex ->
+                                DropdownMenuItem(
+                                    text = { Text(sex) },
+                                    onClick = {
+                                        onAction(AnthropometricAssessmentAction.BiologicalSexChanged(sex))
+                                        sexMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            )
+
+            AdaptiveFieldRow(
+                isTablet = isTablet,
+                first = {
                     AssessmentReadOnlyField(
                         label = "IMC",
                         value = state.bmi
@@ -143,7 +244,7 @@ fun AnthropometricAssessmentScreen(
                 },
                 second = {
                     AssessmentNumberField(
-                        label = "Dobras cutaneas (mm)",
+                        label = "Somatorio de dobras cutaneas (mm)",
                         value = state.skinfolds,
                         onValueChange = { onAction(AnthropometricAssessmentAction.SkinfoldsChanged(it)) }
                     )
@@ -160,10 +261,9 @@ fun AnthropometricAssessmentScreen(
                     )
                 },
                 second = {
-                    AssessmentNumberField(
+                    AssessmentReadOnlyField(
                         label = "Massa magra (kg)",
                         value = state.leanMass,
-                        onValueChange = { onAction(AnthropometricAssessmentAction.LeanMassChanged(it)) }
                     )
                 }
             )
@@ -171,17 +271,15 @@ fun AnthropometricAssessmentScreen(
             AdaptiveFieldRow(
                 isTablet = isTablet,
                 first = {
-                    AssessmentNumberField(
+                    AssessmentReadOnlyField(
                         label = "Massa gorda (kg)",
                         value = state.fatMass,
-                        onValueChange = { onAction(AnthropometricAssessmentAction.FatMassChanged(it)) }
                     )
                 },
                 second = {
-                    AssessmentNumberField(
+                    AssessmentReadOnlyField(
                         label = "Taxa metabolica basal (kcal)",
                         value = state.basalMetabolicRate,
-                        onValueChange = { onAction(AnthropometricAssessmentAction.BasalMetabolicRateChanged(it)) }
                     )
                 }
             )
@@ -189,19 +287,72 @@ fun AnthropometricAssessmentScreen(
             AdaptiveFieldRow(
                 isTablet = isTablet,
                 first = {
-                    AssessmentNumberField(
-                        label = "Gasto energetico total (kcal)",
-                        value = state.totalEnergyExpenditure,
-                        onValueChange = { onAction(AnthropometricAssessmentAction.TotalEnergyExpenditureChanged(it)) }
-                    )
+                    ExposedDropdownMenuBox(
+                        expanded = activityMenuExpanded,
+                        onExpandedChange = { activityMenuExpanded = !activityMenuExpanded }
+                    ) {
+                        OutlinedTextField(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(),
+                            value = state.activityLevel,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Nivel de atividade") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = activityMenuExpanded)
+                            }
+                        )
+                        ExposedDropdownMenu(
+                            expanded = activityMenuExpanded,
+                            onDismissRequest = { activityMenuExpanded = false }
+                        ) {
+                            listOf("Sedentario", "Leve", "Moderado", "Intenso", "Muito intenso").forEach { level ->
+                                DropdownMenuItem(
+                                    text = { Text(level) },
+                                    onClick = {
+                                        onAction(AnthropometricAssessmentAction.ActivityLevelChanged(level))
+                                        activityMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                 },
                 second = {
-                    AssessmentNumberField(
-                        label = "Agua corporal (%)",
-                        value = state.bodyWater,
-                        onValueChange = { onAction(AnthropometricAssessmentAction.BodyWaterChanged(it)) }
+                    AssessmentReadOnlyField(
+                        label = "Gasto energetico total (kcal)",
+                        value = state.totalEnergyExpenditure
                     )
                 }
+            )
+
+            AdaptiveFieldRow(
+                isTablet = isTablet,
+                first = {
+                    AssessmentReadOnlyField(
+                        label = "Agua corporal (%)",
+                        value = state.bodyWater
+                    )
+                },
+                second = { }
+            )
+
+            Text(
+                text = "Obs.: % de gordura e agua corporal sao estimados automaticamente quando ha dados suficientes.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Para % gordura por dobras: informar somatorio de dobras, idade e sexo.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "TMB usa Katch-McArdle (massa magra), com fallback para Mifflin-St Jeor.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "GET = TMB x fator de atividade.",
+                style = MaterialTheme.typography.bodySmall
             )
 
             HorizontalDivider(modifier = Modifier.fillMaxWidth())
@@ -250,6 +401,27 @@ fun AnthropometricAssessmentScreen(
                     }
                 )
             }
+
+            HorizontalDivider(modifier = Modifier.fillMaxWidth())
+            AdaptiveFieldRow(
+                isTablet = isTablet,
+                first = {
+                    Button(
+                        onClick = { showCancelConfirmation = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Cancelar")
+                    }
+                },
+                second = {
+                    Button(
+                        onClick = { showSaveConfirmation = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Salvar")
+                    }
+                }
+            )
         }
     }
 }

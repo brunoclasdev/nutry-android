@@ -11,11 +11,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -31,6 +37,54 @@ fun NutritionalAnamnesisScreen(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
+    var showSaveConfirmation by rememberSaveable { mutableStateOf(false) }
+    var showCancelConfirmation by rememberSaveable { mutableStateOf(false) }
+
+    if (showSaveConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showSaveConfirmation = false },
+            title = { Text("Confirmar salvamento") },
+            text = { Text("Deseja salvar esta anamnese nutricional?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onAction(NutritionalAnamnesisAction.SaveAnamnesis)
+                    showSaveConfirmation = false
+                }) { Text("Salvar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSaveConfirmation = false }) { Text("Voltar") }
+            }
+        )
+    }
+    if (showCancelConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showCancelConfirmation = false },
+            title = { Text("Confirmar cancelamento") },
+            text = { Text("Deseja cancelar? Os dados preenchidos serao limpos.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onAction(NutritionalAnamnesisAction.CancelAnamnesis)
+                    showCancelConfirmation = false
+                }) { Text("Confirmar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelConfirmation = false }) { Text("Voltar") }
+            }
+        )
+    }
+    state.feedbackMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { onAction(NutritionalAnamnesisAction.DismissFeedback) },
+            title = { Text(if (state.feedbackSuccess) "Operacao concluida" else "Falha") },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { onAction(NutritionalAnamnesisAction.DismissFeedback) }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
     BoxWithConstraints(
         modifier = modifier
             .verticalScroll(rememberScrollState())
@@ -164,6 +218,26 @@ fun NutritionalAnamnesisScreen(
                             onAction(NutritionalAnamnesisAction.PhysicalActivityLevelChanged(it))
                         }
                     )
+                }
+            )
+
+            AdaptiveFieldRow(
+                isTablet = isTablet,
+                first = {
+                    Button(
+                        onClick = { showCancelConfirmation = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Cancelar")
+                    }
+                },
+                second = {
+                    Button(
+                        onClick = { showSaveConfirmation = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Salvar")
+                    }
                 }
             )
         }
