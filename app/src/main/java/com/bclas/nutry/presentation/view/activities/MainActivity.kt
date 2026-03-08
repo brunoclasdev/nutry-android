@@ -13,6 +13,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bclas.nutry.presentation.view.ui.screens.AnthropometricAssessmentScreen
 import com.bclas.nutry.presentation.view.ui.screens.HomeScreen
 import com.bclas.nutry.presentation.view.ui.screens.NutritionalAnamnesisScreen
+import com.bclas.nutry.presentation.view.ui.screens.PatientListScreen
 import com.bclas.nutry.presentation.view.ui.screens.PatientRegistrationScreen
 import com.bclas.nutry.presentation.view.ui.theme.NutryTheme
 import com.bclas.nutry.presentation.viewmodel.AnthropometricAssessmentUiState
@@ -23,6 +24,7 @@ import com.bclas.nutry.presentation.viewmodel.NutryScreen
 import com.bclas.nutry.presentation.viewmodel.NutritionalAnamnesisUiState
 import com.bclas.nutry.presentation.viewmodel.NutritionalAnamnesisViewModel
 import com.bclas.nutry.presentation.viewmodel.PatientRegistrationUiState
+import com.bclas.nutry.presentation.viewmodel.PatientRegistrationAction
 import com.bclas.nutry.presentation.viewmodel.PatientRegistrationViewModel
 
 class MainActivity : ComponentActivity() {
@@ -41,7 +43,11 @@ class MainActivity : ComponentActivity() {
                         NutryScreen.HOME -> {
                             HomeScreen(
                                 onRegisterPatientClick = {
+                                    patientRegistrationViewModel.onAction(PatientRegistrationAction.ClearForm)
                                     mainViewModel.onAction(MainAction.NavigateTo(NutryScreen.PATIENT_REGISTRATION))
+                                },
+                                onPatientListClick = {
+                                    mainViewModel.onAction(MainAction.NavigateTo(NutryScreen.PATIENT_LIST))
                                 },
                                 onAnthropometricAssessmentClick = {
                                     mainViewModel.onAction(MainAction.NavigateTo(NutryScreen.ANTHROPOMETRIC_ASSESSMENT))
@@ -58,7 +64,28 @@ class MainActivity : ComponentActivity() {
                             PatientRegistrationScreen(
                                 state = patientRegistrationViewModel.uiState,
                                 onAction = patientRegistrationViewModel::onAction,
+                                onBackClick = {
+                                    patientRegistrationViewModel.onAction(PatientRegistrationAction.ClearForm)
+                                    mainViewModel.onAction(MainAction.NavigateBackHome)
+                                },
+                                onViewPatientsClick = {
+                                    patientRegistrationViewModel.onAction(PatientRegistrationAction.ClearForm)
+                                    mainViewModel.onAction(MainAction.NavigateTo(NutryScreen.PATIENT_LIST))
+                                },
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = innerPadding
+                            )
+                        }
+
+                        NutryScreen.PATIENT_LIST -> {
+                            PatientListScreen(
+                                patients = patientRegistrationViewModel.uiState.registeredPatients,
                                 onBackClick = { mainViewModel.onAction(MainAction.NavigateBackHome) },
+                                onNewAssessmentClick = { patient ->
+                                    mainViewModel.onAction(
+                                        MainAction.StartPatientAssessment(patient.fullName)
+                                    )
+                                },
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = innerPadding
                             )
@@ -69,6 +96,7 @@ class MainActivity : ComponentActivity() {
                                 state = anthropometricAssessmentViewModel.uiState,
                                 onAction = anthropometricAssessmentViewModel::onAction,
                                 onBackClick = { mainViewModel.onAction(MainAction.NavigateBackHome) },
+                                patientName = mainViewModel.uiState.selectedPatientName,
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = innerPadding
                             )
@@ -96,6 +124,7 @@ fun HomeScreenPreview() {
     NutryTheme {
         HomeScreen(
             onRegisterPatientClick = {},
+            onPatientListClick = {},
             onAnthropometricAssessmentClick = {},
             onNutritionalAnamnesisClick = {}
         )
@@ -109,7 +138,8 @@ fun PatientRegistrationScreenPreview() {
         PatientRegistrationScreen(
             state = PatientRegistrationUiState(),
             onAction = {},
-            onBackClick = {}
+            onBackClick = {},
+            onViewPatientsClick = {}
         )
     }
 }

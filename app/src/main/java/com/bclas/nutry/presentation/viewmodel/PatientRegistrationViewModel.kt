@@ -10,6 +10,15 @@ data class AttendanceHistoryItemUiState(
     val description: String
 )
 
+data class RegisteredPatientUiState(
+    val id: Long,
+    val fullName: String,
+    val sex: String,
+    val birthDate: String,
+    val phone: String,
+    val email: String
+)
+
 data class PatientRegistrationUiState(
     val fullName: String = "",
     val sex: String = "",
@@ -18,7 +27,10 @@ data class PatientRegistrationUiState(
     val email: String = "",
     val observations: String = "",
     val patientPhoto: String = "",
-    val attendanceHistory: List<AttendanceHistoryItemUiState> = emptyList()
+    val attendanceHistory: List<AttendanceHistoryItemUiState> = emptyList(),
+    val registeredPatients: List<RegisteredPatientUiState> = emptyList(),
+    val saveFeedbackMessage: String? = null,
+    val saveFeedbackSuccess: Boolean = false
 )
 
 sealed interface PatientRegistrationAction {
@@ -31,6 +43,9 @@ sealed interface PatientRegistrationAction {
     data class PatientPhotoChanged(val value: String) : PatientRegistrationAction
     data class AddAttendanceHistory(val value: String) : PatientRegistrationAction
     data class RemoveAttendanceHistory(val id: Long) : PatientRegistrationAction
+    data object SavePatient : PatientRegistrationAction
+    data object ClearForm : PatientRegistrationAction
+    data object DismissSaveFeedback : PatientRegistrationAction
 }
 
 class PatientRegistrationViewModel : ViewModel() {
@@ -38,6 +53,7 @@ class PatientRegistrationViewModel : ViewModel() {
         private set
 
     private var historyItemIdCounter = 1L
+    private var patientIdCounter = 1L
 
     fun onAction(action: PatientRegistrationAction) {
         when (action) {
@@ -84,6 +100,56 @@ class PatientRegistrationViewModel : ViewModel() {
                 uiState = uiState.copy(
                     attendanceHistory = uiState.attendanceHistory.filterNot { it.id == action.id }
                 )
+            }
+
+            PatientRegistrationAction.SavePatient -> {
+                val name = uiState.fullName.trim()
+                if (name.isBlank()) {
+                    uiState = uiState.copy(
+                        saveFeedbackMessage = "Nao foi possivel salvar. Informe o nome completo.",
+                        saveFeedbackSuccess = false
+                    )
+                    return
+                }
+                val registeredPatient = RegisteredPatientUiState(
+                    id = patientIdCounter++,
+                    fullName = name,
+                    sex = uiState.sex.trim(),
+                    birthDate = uiState.birthDate.trim(),
+                    phone = uiState.phone.trim(),
+                    email = uiState.email.trim()
+                )
+                uiState = uiState.copy(
+                    fullName = "",
+                    sex = "",
+                    birthDate = "",
+                    phone = "",
+                    email = "",
+                    observations = "",
+                    patientPhoto = "",
+                    attendanceHistory = emptyList(),
+                    registeredPatients = uiState.registeredPatients + registeredPatient,
+                    saveFeedbackMessage = "Cadastro realizado com sucesso.",
+                    saveFeedbackSuccess = true
+                )
+            }
+
+            PatientRegistrationAction.ClearForm -> {
+                uiState = uiState.copy(
+                    fullName = "",
+                    sex = "",
+                    birthDate = "",
+                    phone = "",
+                    email = "",
+                    observations = "",
+                    patientPhoto = "",
+                    attendanceHistory = emptyList(),
+                    saveFeedbackMessage = null
+                )
+            }
+
+            PatientRegistrationAction.DismissSaveFeedback -> {
+                uiState = uiState.copy(saveFeedbackMessage = null)
             }
         }
     }

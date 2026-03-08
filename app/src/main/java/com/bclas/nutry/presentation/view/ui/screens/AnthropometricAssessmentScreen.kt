@@ -35,6 +35,7 @@ fun AnthropometricAssessmentScreen(
     state: AnthropometricAssessmentUiState,
     onAction: (AnthropometricAssessmentAction) -> Unit,
     onBackClick: () -> Unit = {},
+    patientName: String? = null,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
@@ -56,6 +57,12 @@ fun AnthropometricAssessmentScreen(
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
+        if (!patientName.isNullOrBlank()) {
+            Text(
+                text = "Paciente: $patientName",
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
         Text(
             text = "Preencha os dados do paciente. IMC e relacao cintura/quadril sao calculados automaticamente.",
             style = MaterialTheme.typography.bodyMedium

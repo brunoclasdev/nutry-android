@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun HomeScreen(
     onRegisterPatientClick: () -> Unit,
+    onPatientListClick: () -> Unit,
     onAnthropometricAssessmentClick: () -> Unit,
     onNutritionalAnamnesisClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -44,6 +45,12 @@ fun HomeScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Cadastro de pacientes")
+        }
+        Button(
+            onClick = onPatientListClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Pacientes cadastrados")
         }
 
         Button(

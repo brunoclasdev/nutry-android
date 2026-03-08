@@ -1,15 +1,26 @@
 package com.bclas.nutry.presentation.view.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -28,16 +39,83 @@ import androidx.compose.ui.unit.dp
 import com.bclas.nutry.presentation.viewmodel.AttendanceHistoryItemUiState
 import com.bclas.nutry.presentation.viewmodel.PatientRegistrationAction
 import com.bclas.nutry.presentation.viewmodel.PatientRegistrationUiState
+import androidx.compose.material3.rememberDatePickerState
+import java.util.Calendar
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PatientRegistrationScreen(
     state: PatientRegistrationUiState,
     onAction: (PatientRegistrationAction) -> Unit,
     onBackClick: () -> Unit,
+    onViewPatientsClick: () -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     var newHistoryItem by rememberSaveable { mutableStateOf("") }
+    var sexMenuExpanded by rememberSaveable { mutableStateOf(false) }
+    var showBirthDatePicker by rememberSaveable { mutableStateOf(false) }
+    val calendar = rememberSaveable { Calendar.getInstance() }
+    val datePickerState = rememberDatePickerState()
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            onAction(PatientRegistrationAction.PatientPhotoChanged(uri.toString()))
+        }
+    }
+    if (showBirthDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showBirthDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val selectedDateMillis = datePickerState.selectedDateMillis
+                        if (selectedDateMillis != null) {
+                            calendar.timeInMillis = selectedDateMillis
+                            val selectedDate = String.format(
+                                "%02d/%02d/%04d",
+                                calendar.get(Calendar.DAY_OF_MONTH),
+                                calendar.get(Calendar.MONTH) + 1,
+                                calendar.get(Calendar.YEAR)
+                            )
+                            onAction(PatientRegistrationAction.BirthDateChanged(selectedDate))
+                        }
+                        showBirthDatePicker = false
+                    }
+                ) {
+                    Text("Confirmar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBirthDatePicker = false }) {
+                    Text("Cancelar")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+    state.saveFeedbackMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = {
+                onAction(PatientRegistrationAction.DismissSaveFeedback)
+            },
+            title = {
+                Text(
+                    if (state.saveFeedbackSuccess) "Cadastro salvo" else "Falha no cadastro"
+                )
+            },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(
+                    onClick = { onAction(PatientRegistrationAction.DismissSaveFeedback) }
+                ) {
+                    Text("OK")
+                }
+            }
+        )
+    }
 
     Column(
         modifier = modifier
@@ -55,6 +133,10 @@ fun PatientRegistrationScreen(
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
+        Text(
+            text = "Pacientes cadastrados: ${state.registeredPatients.size}",
+            style = MaterialTheme.typography.bodyMedium
+        )
 
         OutlinedTextField(
             modifier = Modifier.fillMaxWidth(),
@@ -64,21 +146,56 @@ fun PatientRegistrationScreen(
             singleLine = true
         )
 
-        OutlinedTextField(
-            modifier = Modifier.fillMaxWidth(),
-            value = state.sex,
-            onValueChange = { onAction(PatientRegistrationAction.SexChanged(it)) },
-            label = { Text("Sexo") },
-            singleLine = true
-        )
+        ExposedDropdownMenuBox(
+            expanded = sexMenuExpanded,
+            onExpandedChange = { sexMenuExpanded = !sexMenuExpanded }
+        ) {
+            OutlinedTextField(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(),
+                value = state.sex,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Sexo") },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = sexMenuExpanded)
+                },
+                singleLine = true
+            )
+            ExposedDropdownMenu(
+                expanded = sexMenuExpanded,
+                onDismissRequest = { sexMenuExpanded = false }
+            ) {
+                listOf("Masculino", "Feminino").forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = {
+                            onAction(PatientRegistrationAction.SexChanged(option))
+                            sexMenuExpanded = false
+                        }
+                    )
+                }
+            }
+        }
 
-        OutlinedTextField(
-            modifier = Modifier.fillMaxWidth(),
-            value = state.birthDate,
-            onValueChange = { onAction(PatientRegistrationAction.BirthDateChanged(it)) },
-            label = { Text("Data de nascimento (dd/mm/aaaa)") },
-            singleLine = true
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    showBirthDatePicker = true
+                }
+        ) {
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = state.birthDate,
+                onValueChange = {},
+                enabled = false,
+                label = { Text("Data de nascimento") },
+                placeholder = { Text("Toque para selecionar") },
+                singleLine = true
+            )
+        }
 
         OutlinedTextField(
             modifier = Modifier.fillMaxWidth(),
@@ -114,10 +231,17 @@ fun PatientRegistrationScreen(
         OutlinedTextField(
             modifier = Modifier.fillMaxWidth(),
             value = state.patientPhoto,
-            onValueChange = { onAction(PatientRegistrationAction.PatientPhotoChanged(it)) },
-            label = { Text("URI/caminho da foto") },
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Foto selecionada") },
             singleLine = true
         )
+        Button(
+            onClick = { photoPickerLauncher.launch("image/*") },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Escolher foto da galeria")
+        }
 
         HorizontalDivider(modifier = Modifier.fillMaxWidth())
 
@@ -154,6 +278,27 @@ fun PatientRegistrationScreen(
                     onAction(PatientRegistrationAction.RemoveAttendanceHistory(item.id))
                 }
             )
+        }
+
+        HorizontalDivider(modifier = Modifier.fillMaxWidth())
+
+        Button(
+            onClick = { onAction(PatientRegistrationAction.SavePatient) },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Salvar paciente")
+        }
+        Button(
+            onClick = onViewPatientsClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Ver pacientes cadastrados")
+        }
+        TextButton(
+            onClick = { onAction(PatientRegistrationAction.ClearForm) },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Limpar formulario")
         }
     }
 }
