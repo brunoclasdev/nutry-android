@@ -34,6 +34,7 @@ import com.bclas.nutry.presentation.viewmodel.ProtocolFieldUiState
 fun AnthropometricAssessmentScreen(
     state: AnthropometricAssessmentUiState,
     onAction: (AnthropometricAssessmentAction) -> Unit,
+    onBackClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
@@ -46,6 +47,10 @@ fun AnthropometricAssessmentScreen(
             .padding(horizontal = 16.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        TextButton(onClick = onBackClick) {
+            Text("Voltar")
+        }
+
         Text(
             text = "Avaliacao antropometrica",
             style = MaterialTheme.typography.headlineSmall,
