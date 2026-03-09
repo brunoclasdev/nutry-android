@@ -15,10 +15,15 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -31,6 +36,8 @@ fun PatientListScreen(
     onBackClick: () -> Unit,
     onNewAssessmentClick: (RegisteredPatientUiState) -> Unit,
     onViewHistoryClick: (RegisteredPatientUiState) -> Unit,
+    onEditPatientClick: (RegisteredPatientUiState) -> Unit,
+    onDeletePatientClick: (RegisteredPatientUiState) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
@@ -72,7 +79,9 @@ fun PatientListScreen(
                         PatientCard(
                             patient = patient,
                             onNewAssessmentClick = { onNewAssessmentClick(patient) },
-                            onViewHistoryClick = { onViewHistoryClick(patient) }
+                            onViewHistoryClick = { onViewHistoryClick(patient) },
+                            onEditPatientClick = { onEditPatientClick(patient) },
+                            onDeletePatientClick = { onDeletePatientClick(patient) }
                         )
                     }
                 }
@@ -84,7 +93,9 @@ fun PatientListScreen(
                         PatientCard(
                             patient = patient,
                             onNewAssessmentClick = { onNewAssessmentClick(patient) },
-                            onViewHistoryClick = { onViewHistoryClick(patient) }
+                            onViewHistoryClick = { onViewHistoryClick(patient) },
+                            onEditPatientClick = { onEditPatientClick(patient) },
+                            onDeletePatientClick = { onDeletePatientClick(patient) }
                         )
                     }
                 }
@@ -97,8 +108,35 @@ fun PatientListScreen(
 private fun PatientCard(
     patient: RegisteredPatientUiState,
     onNewAssessmentClick: () -> Unit,
-    onViewHistoryClick: () -> Unit
+    onViewHistoryClick: () -> Unit,
+    onEditPatientClick: () -> Unit,
+    onDeletePatientClick: () -> Unit
 ) {
+    var showDeleteConfirmation by rememberSaveable { mutableStateOf(false) }
+
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = { Text("Excluir paciente") },
+            text = { Text("Deseja realmente deletar este paciente? Esta acao nao pode ser desfeita.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirmation = false
+                        onDeletePatientClick()
+                    }
+                ) {
+                    Text("Excluir")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmation = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -129,6 +167,12 @@ private fun PatientCard(
             ) {
                 TextButton(onClick = onViewHistoryClick) {
                     Text("Ver historico")
+                }
+                TextButton(onClick = onEditPatientClick) {
+                    Text("Atualizar")
+                }
+                TextButton(onClick = { showDeleteConfirmation = true }) {
+                    Text("Deletar")
                 }
                 Button(onClick = onNewAssessmentClick) {
                     Text("Nova avaliacao")

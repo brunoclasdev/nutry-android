@@ -144,6 +144,13 @@ fun PatientRegistrationScreen(
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
+            if (state.editingPatientId != null) {
+                Text(
+                    text = "Modo edicao do paciente",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
             Text(
                 text = "Pacientes cadastrados: ${state.registeredPatients.size}",
                 style = MaterialTheme.typography.bodyMedium
@@ -310,7 +317,7 @@ fun PatientRegistrationScreen(
                         onClick = { onAction(PatientRegistrationAction.SavePatient) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Salvar paciente")
+                        Text(if (state.editingPatientId == null) "Salvar paciente" else "Atualizar paciente")
                     }
                 },
                 second = {

@@ -73,14 +73,6 @@ class MainActivity : ComponentActivity() {
                                 onPatientListClick = {
                                     mainViewModel.onAction(MainAction.NavigateTo(NutryScreen.PATIENT_LIST))
                                 },
-                                onAnthropometricAssessmentClick = {
-                                    anthropometricAssessmentViewModel.onAction(AnthropometricAssessmentAction.ClearForm)
-                                    mainViewModel.onAction(MainAction.NavigateTo(NutryScreen.ANTHROPOMETRIC_ASSESSMENT))
-                                },
-                                onNutritionalAnamnesisClick = {
-                                    nutritionalAnamnesisViewModel.onAction(NutritionalAnamnesisAction.ClearForm)
-                                    mainViewModel.onAction(MainAction.NavigateTo(NutryScreen.NUTRITIONAL_ANAMNESIS))
-                                },
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = innerPadding
                             )
@@ -117,6 +109,17 @@ class MainActivity : ComponentActivity() {
                                 onViewHistoryClick = { patient ->
                                     mainViewModel.onAction(MainAction.ViewPatientHistory(patient.id))
                                 },
+                                onEditPatientClick = { patient ->
+                                    patientRegistrationViewModel.onAction(
+                                        PatientRegistrationAction.StartEditingPatient(patient.id)
+                                    )
+                                    mainViewModel.onAction(MainAction.NavigateTo(NutryScreen.PATIENT_REGISTRATION))
+                                },
+                                onDeletePatientClick = { patient ->
+                                    patientRegistrationViewModel.onAction(
+                                        PatientRegistrationAction.DeletePatient(patient.id)
+                                    )
+                                },
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = innerPadding
                             )
@@ -126,6 +129,17 @@ class MainActivity : ComponentActivity() {
                             PatientHistoryScreen(
                                 patient = selectedPatient,
                                 onBackClick = { mainViewModel.onAction(MainAction.NavigateBack) },
+                                onDeleteAssessmentClick = { assessmentId ->
+                                    val patientId = mainViewModel.uiState.selectedPatientId
+                                    if (patientId != null) {
+                                        patientRegistrationViewModel.onAction(
+                                            PatientRegistrationAction.DeleteAssessment(
+                                                patientId = patientId,
+                                                assessmentId = assessmentId
+                                            )
+                                        )
+                                    }
+                                },
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = innerPadding
                             )
@@ -199,9 +213,7 @@ fun HomeScreenPreview() {
     NutryTheme {
         HomeScreen(
             onRegisterPatientClick = {},
-            onPatientListClick = {},
-            onAnthropometricAssessmentClick = {},
-            onNutritionalAnamnesisClick = {}
+            onPatientListClick = {}
         )
     }
 }
