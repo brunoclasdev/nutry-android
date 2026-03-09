@@ -23,8 +23,6 @@ import androidx.compose.ui.unit.dp
 fun HomeScreen(
     onRegisterPatientClick: () -> Unit,
     onPatientListClick: () -> Unit,
-    onAnthropometricAssessmentClick: () -> Unit,
-    onNutritionalAnamnesisClick: () -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
@@ -71,23 +69,6 @@ fun HomeScreen(
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        onClick = onAnthropometricAssessmentClick,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Avaliacao antropometrica")
-                    }
-                    Button(
-                        onClick = onNutritionalAnamnesisClick,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Anamnese nutricional")
-                    }
-                }
             } else {
                 Button(
                     onClick = onRegisterPatientClick,
@@ -100,18 +81,6 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Pacientes cadastrados")
-                }
-                Button(
-                    onClick = onAnthropometricAssessmentClick,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Avaliacao antropometrica")
-                }
-                Button(
-                    onClick = onNutritionalAnamnesisClick,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Anamnese nutricional")
                 }
             }
         }

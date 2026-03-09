@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,12 +31,40 @@ import com.bclas.nutry.presentation.viewmodel.RegisteredPatientUiState
 fun PatientHistoryScreen(
     patient: RegisteredPatientUiState?,
     onBackClick: () -> Unit,
+    onDeleteAssessmentClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     var selectedAssessmentId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var pendingDeleteAssessmentId by rememberSaveable { mutableStateOf<Long?>(null) }
     val records = patient?.assessmentHistory.orEmpty().reversed()
     val selectedRecord = records.firstOrNull { it.id == selectedAssessmentId }
+
+    pendingDeleteAssessmentId?.let { assessmentId ->
+        AlertDialog(
+            onDismissRequest = { pendingDeleteAssessmentId = null },
+            title = { Text("Excluir avaliacao") },
+            text = { Text("Deseja realmente excluir esta avaliacao do historico?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingDeleteAssessmentId = null
+                        if (selectedAssessmentId == assessmentId) {
+                            selectedAssessmentId = null
+                        }
+                        onDeleteAssessmentClick(assessmentId)
+                    }
+                ) {
+                    Text("Excluir")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteAssessmentId = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 
     BoxWithConstraints(
         modifier = modifier
@@ -87,8 +116,16 @@ fun PatientHistoryScreen(
                                 )
                                 Text("IMC: ${record.anthropometric.bmi}")
                                 Text("Objetivo: ${record.anamnesis.patientGoal}")
-                                TextButton(onClick = { selectedAssessmentId = record.id }) {
-                                    Text("Ver detalhes")
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    TextButton(onClick = { selectedAssessmentId = record.id }) {
+                                        Text("Ver detalhes")
+                                    }
+                                    TextButton(onClick = { pendingDeleteAssessmentId = record.id }) {
+                                        Text("Excluir avaliacao")
+                                    }
                                 }
                             }
                         }
@@ -98,14 +135,20 @@ fun PatientHistoryScreen(
                 TextButton(onClick = { selectedAssessmentId = null }) {
                     Text("Voltar para lista")
                 }
-                AssessmentHistoryDetail(record = selectedRecord)
+                AssessmentHistoryDetail(
+                    record = selectedRecord,
+                    onRequestDeleteAssessmentClick = { pendingDeleteAssessmentId = it }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun AssessmentHistoryDetail(record: PatientAssessmentRecordUiState) {
+private fun AssessmentHistoryDetail(
+    record: PatientAssessmentRecordUiState,
+    onRequestDeleteAssessmentClick: (Long) -> Unit
+) {
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -160,6 +203,9 @@ private fun AssessmentHistoryDetail(record: PatientAssessmentRecordUiState) {
                 Text("TMB: ${record.anthropometric.basalMetabolicRate} kcal")
                 Text("GET: ${record.anthropometric.totalEnergyExpenditure} kcal")
                 Text("Agua corporal: ${record.anthropometric.bodyWater}%")
+                TextButton(onClick = { onRequestDeleteAssessmentClick(record.id) }) {
+                    Text("Excluir avaliacao")
+                }
             }
         }
     }

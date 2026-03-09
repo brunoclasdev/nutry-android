@@ -1,15 +1,15 @@
 package com.bclas.nutry.presentation.viewmodel
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModel
 import com.bclas.nutry.core.di.AppContainer
 import com.bclas.nutry.domain.model.AnthropometricData
 import com.bclas.nutry.domain.model.AttendanceHistoryItem
 import com.bclas.nutry.domain.model.NutritionalAnamnesisData
 import com.bclas.nutry.domain.model.Patient
 import com.bclas.nutry.domain.model.PatientDraft
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
 
 data class AttendanceHistoryItemUiState(
     val id: Long,
@@ -37,6 +37,7 @@ data class PatientAssessmentRecordUiState(
 )
 
 data class PatientRegistrationUiState(
+    val editingPatientId: Long? = null,
     val fullName: String = "",
     val sex: String = "",
     val birthDate: String = "",
@@ -66,6 +67,10 @@ sealed interface PatientRegistrationAction {
         val anamnesis: NutritionalAnamnesisData,
         val anthropometric: AnthropometricData
     ) : PatientRegistrationAction
+
+    data class StartEditingPatient(val patientId: Long) : PatientRegistrationAction
+    data class DeletePatient(val patientId: Long) : PatientRegistrationAction
+    data class DeleteAssessment(val patientId: Long, val assessmentId: Long) : PatientRegistrationAction
     data object ReloadPatients : PatientRegistrationAction
     data object ClearForm : PatientRegistrationAction
     data object DismissSaveFeedback : PatientRegistrationAction
@@ -74,7 +79,10 @@ sealed interface PatientRegistrationAction {
 class PatientRegistrationViewModel : ViewModel() {
     private val getPatientsUseCase = AppContainer.getPatientsUseCase
     private val savePatientUseCase = AppContainer.savePatientUseCase
+    private val updatePatientUseCase = AppContainer.updatePatientUseCase
+    private val deletePatientUseCase = AppContainer.deletePatientUseCase
     private val saveAssessmentForPatientUseCase = AppContainer.saveAssessmentForPatientUseCase
+    private val deleteAssessmentUseCase = AppContainer.deleteAssessmentUseCase
 
     var uiState by mutableStateOf(PatientRegistrationUiState())
         private set
@@ -133,23 +141,29 @@ class PatientRegistrationViewModel : ViewModel() {
             }
 
             PatientRegistrationAction.SavePatient -> {
-                val result = savePatientUseCase(
-                    PatientDraft(
-                        fullName = uiState.fullName,
-                        sex = uiState.sex,
-                        birthDate = uiState.birthDate,
-                        phone = uiState.phone,
-                        email = uiState.email,
-                        observations = uiState.observations,
-                        patientPhoto = uiState.patientPhoto,
-                        attendanceHistory = uiState.attendanceHistory.map {
-                            AttendanceHistoryItem(it.id, it.description)
-                        }
-                    )
+                val isEditing = uiState.editingPatientId != null
+                val draft = PatientDraft(
+                    fullName = uiState.fullName,
+                    sex = uiState.sex,
+                    birthDate = uiState.birthDate,
+                    phone = uiState.phone,
+                    email = uiState.email,
+                    observations = uiState.observations,
+                    patientPhoto = uiState.patientPhoto,
+                    attendanceHistory = uiState.attendanceHistory.map {
+                        AttendanceHistoryItem(it.id, it.description)
+                    }
                 )
+                val result = if (isEditing) {
+                    updatePatientUseCase(uiState.editingPatientId ?: 0L, draft)
+                } else {
+                    savePatientUseCase(draft)
+                }
+
                 if (result.isSuccess) {
                     refreshPatients()
                     uiState = uiState.copy(
+                        editingPatientId = null,
                         fullName = "",
                         sex = "",
                         birthDate = "",
@@ -158,7 +172,11 @@ class PatientRegistrationViewModel : ViewModel() {
                         observations = "",
                         patientPhoto = "",
                         attendanceHistory = emptyList(),
-                        saveFeedbackMessage = "Cadastro realizado com sucesso.",
+                        saveFeedbackMessage = if (isEditing) {
+                            "Paciente atualizado com sucesso."
+                        } else {
+                            "Cadastro realizado com sucesso."
+                        },
                         saveFeedbackSuccess = true
                     )
                 } else {
@@ -190,12 +208,81 @@ class PatientRegistrationViewModel : ViewModel() {
                 refreshPatients()
             }
 
+            is PatientRegistrationAction.StartEditingPatient -> {
+                val patient = uiState.registeredPatients.firstOrNull { it.id == action.patientId } ?: return
+                uiState = uiState.copy(
+                    editingPatientId = patient.id,
+                    fullName = patient.fullName,
+                    sex = patient.sex,
+                    birthDate = patient.birthDate,
+                    phone = patient.phone,
+                    email = patient.email,
+                    observations = patient.observations,
+                    patientPhoto = patient.patientPhoto,
+                    attendanceHistory = patient.attendanceHistory,
+                    saveFeedbackMessage = null
+                )
+                historyItemIdCounter = (patient.attendanceHistory.maxOfOrNull { it.id } ?: 0L) + 1L
+            }
+
+            is PatientRegistrationAction.DeletePatient -> {
+                val result = deletePatientUseCase(action.patientId)
+                if (result.isSuccess) {
+                    val isEditingDeletedPatient = uiState.editingPatientId == action.patientId
+                    refreshPatients()
+                    uiState = if (isEditingDeletedPatient) {
+                        uiState.copy(
+                            editingPatientId = null,
+                            fullName = "",
+                            sex = "",
+                            birthDate = "",
+                            phone = "",
+                            email = "",
+                            observations = "",
+                            patientPhoto = "",
+                            attendanceHistory = emptyList(),
+                            saveFeedbackMessage = "Paciente removido com sucesso.",
+                            saveFeedbackSuccess = true
+                        )
+                    } else {
+                        uiState.copy(
+                            saveFeedbackMessage = "Paciente removido com sucesso.",
+                            saveFeedbackSuccess = true
+                        )
+                    }
+                } else {
+                    uiState = uiState.copy(
+                        saveFeedbackMessage = result.exceptionOrNull()?.message
+                            ?: "Nao foi possivel remover o paciente.",
+                        saveFeedbackSuccess = false
+                    )
+                }
+            }
+
+            is PatientRegistrationAction.DeleteAssessment -> {
+                val result = deleteAssessmentUseCase(action.patientId, action.assessmentId)
+                if (result.isSuccess) {
+                    refreshPatients()
+                    uiState = uiState.copy(
+                        saveFeedbackMessage = "Avaliacao removida do historico.",
+                        saveFeedbackSuccess = true
+                    )
+                } else {
+                    uiState = uiState.copy(
+                        saveFeedbackMessage = result.exceptionOrNull()?.message
+                            ?: "Nao foi possivel remover a avaliacao.",
+                        saveFeedbackSuccess = false
+                    )
+                }
+            }
+
             PatientRegistrationAction.ReloadPatients -> {
                 refreshPatients()
             }
 
             PatientRegistrationAction.ClearForm -> {
                 uiState = uiState.copy(
+                    editingPatientId = null,
                     fullName = "",
                     sex = "",
                     birthDate = "",

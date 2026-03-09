@@ -69,6 +69,51 @@ class RoomPatientRepository(
         }
     }
 
+    override fun updatePatient(patientId: Long, draft: PatientDraft): Result<Patient> = runBlocking {
+        withContext(Dispatchers.IO) {
+            val existing = patientDao.getPatientById(patientId)
+                ?: return@withContext Result.failure(IllegalStateException("Paciente nao encontrado."))
+
+            val name = draft.fullName.trim()
+            if (name.isBlank()) {
+                return@withContext Result.failure(IllegalArgumentException("Informe o nome completo."))
+            }
+
+            val rows = patientDao.updatePatient(
+                existing.copy(
+                    fullName = name,
+                    sex = draft.sex.trim(),
+                    birthDate = draft.birthDate.trim(),
+                    phone = draft.phone.trim(),
+                    email = draft.email.trim(),
+                    observations = draft.observations.trim(),
+                    patientPhoto = draft.patientPhoto.trim(),
+                    attendanceHistorySerialized = draft.attendanceHistory.joinToString("\n") {
+                        it.description.trim()
+                    }
+                )
+            )
+            if (rows <= 0) {
+                return@withContext Result.failure(IllegalStateException("Falha ao atualizar paciente."))
+            }
+
+            val persisted = patientDao.getPatientById(patientId)
+                ?: return@withContext Result.failure(IllegalStateException("Paciente nao encontrado."))
+            val assessments = patientDao.getAssessmentsByPatientId(patientId)
+            Result.success(persisted.toDomain(assessments))
+        }
+    }
+
+    override fun deletePatient(patientId: Long): Result<Unit> = runBlocking {
+        withContext(Dispatchers.IO) {
+            val rows = patientDao.deletePatientById(patientId)
+            if (rows <= 0) {
+                return@withContext Result.failure(IllegalStateException("Paciente nao encontrado."))
+            }
+            Result.success(Unit)
+        }
+    }
+
     override fun saveAssessmentForPatient(
         patientId: Long,
         anamnesis: NutritionalAnamnesisData,
@@ -127,6 +172,16 @@ class RoomPatientRepository(
                 newAttendanceEntry
             ).joinToString("\n")
             patientDao.updateAttendanceHistory(patient.id, updatedAttendanceHistory)
+            Result.success(Unit)
+        }
+    }
+
+    override fun deleteAssessment(patientId: Long, assessmentId: Long): Result<Unit> = runBlocking {
+        withContext(Dispatchers.IO) {
+            val rows = patientDao.deleteAssessmentById(patientId, assessmentId)
+            if (rows <= 0) {
+                return@withContext Result.failure(IllegalStateException("Avaliacao nao encontrada."))
+            }
             Result.success(Unit)
         }
     }
