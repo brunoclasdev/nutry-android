@@ -34,6 +34,7 @@ fun NutritionalAnamnesisScreen(
     state: NutritionalAnamnesisUiState,
     onAction: (NutritionalAnamnesisAction) -> Unit,
     onBackClick: () -> Unit,
+    onProceedClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
@@ -47,9 +48,11 @@ fun NutritionalAnamnesisScreen(
             text = { Text("Deseja salvar esta anamnese nutricional?") },
             confirmButton = {
                 TextButton(onClick = {
+                    val canProceed = state.patientGoal.isNotBlank() || state.dietaryRoutine.isNotBlank()
                     onAction(NutritionalAnamnesisAction.SaveAnamnesis)
+                    if (canProceed) onProceedClick()
                     showSaveConfirmation = false
-                }) { Text("Salvar") }
+                }) { Text("Salvar e continuar") }
             },
             dismissButton = {
                 TextButton(onClick = { showSaveConfirmation = false }) { Text("Voltar") }
@@ -236,7 +239,7 @@ fun NutritionalAnamnesisScreen(
                         onClick = { showSaveConfirmation = true },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Salvar")
+                        Text("Salvar e continuar")
                     }
                 }
             )
