@@ -66,6 +66,7 @@ sealed interface PatientRegistrationAction {
         val anamnesis: NutritionalAnamnesisData,
         val anthropometric: AnthropometricData
     ) : PatientRegistrationAction
+    data object ReloadPatients : PatientRegistrationAction
     data object ClearForm : PatientRegistrationAction
     data object DismissSaveFeedback : PatientRegistrationAction
 }
@@ -170,11 +171,26 @@ class PatientRegistrationViewModel : ViewModel() {
             }
 
             is PatientRegistrationAction.SaveAssessmentForPatient -> {
-                saveAssessmentForPatientUseCase(
+                val result = saveAssessmentForPatientUseCase(
                     patientId = action.patientId,
                     anamnesis = action.anamnesis,
                     anthropometric = action.anthropometric
                 )
+                if (result.isFailure) {
+                    uiState = uiState.copy(
+                        saveFeedbackMessage = result.exceptionOrNull()?.message ?: "Falha ao salvar avaliacao.",
+                        saveFeedbackSuccess = false
+                    )
+                } else {
+                    uiState = uiState.copy(
+                        saveFeedbackMessage = "Avaliacao salva no historico com sucesso.",
+                        saveFeedbackSuccess = true
+                    )
+                }
+                refreshPatients()
+            }
+
+            PatientRegistrationAction.ReloadPatients -> {
                 refreshPatients()
             }
 
@@ -202,6 +218,33 @@ class PatientRegistrationViewModel : ViewModel() {
         uiState = uiState.copy(
             registeredPatients = getPatientsUseCase().map { it.toUiState() }
         )
+    }
+
+    fun saveAssessmentForPatient(
+        patientId: Long,
+        anamnesis: NutritionalAnamnesisData,
+        anthropometric: AnthropometricData
+    ): Boolean {
+        val result = saveAssessmentForPatientUseCase(
+            patientId = patientId,
+            anamnesis = anamnesis,
+            anthropometric = anthropometric
+        )
+
+        if (result.isFailure) {
+            uiState = uiState.copy(
+                saveFeedbackMessage = result.exceptionOrNull()?.message ?: "Falha ao salvar avaliacao.",
+                saveFeedbackSuccess = false
+            )
+            return false
+        }
+
+        refreshPatients()
+        uiState = uiState.copy(
+            saveFeedbackMessage = "Avaliacao salva no historico com sucesso.",
+            saveFeedbackSuccess = true
+        )
+        return true
     }
 }
 

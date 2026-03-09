@@ -113,6 +113,20 @@ class RoomPatientRepository(
             )
 
             patientDao.insertAssessment(assessmentEntity)
+            val newAttendanceEntry = buildString {
+                append(nowFormatted())
+                append(" - Avaliacao concluida")
+                if (anthropometric.bmi.isNotBlank()) {
+                    append(" (IMC: ")
+                    append(anthropometric.bmi)
+                    append(")")
+                }
+            }
+            val updatedAttendanceHistory = listOfNotNull(
+                patient.attendanceHistorySerialized.takeIf { it.isNotBlank() },
+                newAttendanceEntry
+            ).joinToString("\n")
+            patientDao.updateAttendanceHistory(patient.id, updatedAttendanceHistory)
             Result.success(Unit)
         }
     }

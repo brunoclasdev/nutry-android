@@ -37,6 +37,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bclas.nutry.presentation.viewmodel.AnthropometricAssessmentAction
 import com.bclas.nutry.presentation.viewmodel.AnthropometricAssessmentUiState
+import com.bclas.nutry.presentation.viewmodel.BMR_FORMULA_OPTIONS
 import com.bclas.nutry.presentation.viewmodel.ProtocolFieldUiState
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -56,6 +57,7 @@ fun AnthropometricAssessmentScreen(
     var showCancelConfirmation by rememberSaveable { mutableStateOf(false) }
     var sexMenuExpanded by rememberSaveable { mutableStateOf(false) }
     var activityMenuExpanded by rememberSaveable { mutableStateOf(false) }
+    var formulaMenuExpanded by rememberSaveable { mutableStateOf(false) }
 
     if (showSaveConfirmation) {
         AlertDialog(
@@ -211,6 +213,16 @@ fun AnthropometricAssessmentScreen(
                     )
                 },
                 second = {
+                    AssessmentReadOnlyField(
+                        label = "Peso ideal (kg)",
+                        value = state.idealWeight
+                    )
+                }
+            )
+
+            AdaptiveFieldRow(
+                isTablet = isTablet,
+                first = {
                     AssessmentNumberField(
                         label = "Circunferencia abdominal (cm)",
                         value = state.abdominalCircumference,
@@ -218,40 +230,29 @@ fun AnthropometricAssessmentScreen(
                             onAction(AnthropometricAssessmentAction.AbdominalCircumferenceChanged(it))
                         }
                     )
-                }
-            )
-
-            AdaptiveFieldRow(
-                isTablet = isTablet,
-                first = {
+                },
+                second = {
                     AssessmentNumberField(
                         label = "Circunferencia de cintura (cm)",
                         value = state.waistCircumference,
                         onValueChange = { onAction(AnthropometricAssessmentAction.WaistCircumferenceChanged(it)) }
                     )
-                },
-                second = {
-                    AssessmentNumberField(
-                        label = "Circunferencia de quadril (cm)",
-                        value = state.hipCircumference,
-                        onValueChange = { onAction(AnthropometricAssessmentAction.HipCircumferenceChanged(it)) }
-                    )
                 }
             )
 
             AdaptiveFieldRow(
                 isTablet = isTablet,
                 first = {
-                    AssessmentReadOnlyField(
-                        label = "Relacao cintura/quadril",
-                        value = state.waistHipRatio
+                    AssessmentNumberField(
+                        label = "Circunferencia de quadril (cm)",
+                        value = state.hipCircumference,
+                        onValueChange = { onAction(AnthropometricAssessmentAction.HipCircumferenceChanged(it)) }
                     )
                 },
                 second = {
-                    AssessmentNumberField(
-                        label = "Somatorio de dobras cutaneas (mm)",
-                        value = state.skinfolds,
-                        onValueChange = { onAction(AnthropometricAssessmentAction.SkinfoldsChanged(it)) }
+                    AssessmentReadOnlyField(
+                        label = "Relacao cintura/quadril",
+                        value = state.waistHipRatio
                     )
                 }
             )
@@ -288,6 +289,61 @@ fun AnthropometricAssessmentScreen(
                     )
                 }
             )
+
+            ExposedDropdownMenuBox(
+                expanded = formulaMenuExpanded,
+                onExpandedChange = { formulaMenuExpanded = !formulaMenuExpanded }
+            ) {
+                OutlinedTextField(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    value = state.bmrFormula,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Formula da TMB") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = formulaMenuExpanded)
+                    }
+                )
+                ExposedDropdownMenu(
+                    expanded = formulaMenuExpanded,
+                    onDismissRequest = { formulaMenuExpanded = false }
+                ) {
+                    BMR_FORMULA_OPTIONS.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text("${option.name} - ${option.mainUse}") },
+                            onClick = {
+                                onAction(AnthropometricAssessmentAction.BmrFormulaChanged(option.name))
+                                formulaMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+            if (state.bmrFormula == "Penn State") {
+                AdaptiveFieldRow(
+                    isTablet = isTablet,
+                    first = {
+                        AssessmentNumberField(
+                            label = "Ventilacao minuto (L/min)",
+                            value = state.ventilationLMin,
+                            onValueChange = {
+                                onAction(AnthropometricAssessmentAction.VentilationLMinChanged(it))
+                            }
+                        )
+                    },
+                    second = {
+                        AssessmentNumberField(
+                            label = "Temp. corporal maxima (C)",
+                            value = state.maxBodyTemperatureC,
+                            onValueChange = {
+                                onAction(AnthropometricAssessmentAction.MaxBodyTemperatureCChanged(it))
+                            }
+                        )
+                    }
+                )
+            }
 
             AdaptiveFieldRow(
                 isTablet = isTablet,
@@ -352,7 +408,7 @@ fun AnthropometricAssessmentScreen(
                 style = MaterialTheme.typography.bodySmall
             )
             Text(
-                text = "TMB usa Katch-McArdle (massa magra), com fallback para Mifflin-St Jeor.",
+                text = "TMB usa a formula selecionada no combo.",
                 style = MaterialTheme.typography.bodySmall
             )
             Text(

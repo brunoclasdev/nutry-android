@@ -15,9 +15,17 @@ enum class NutryScreen {
     ASSESSMENT_FINAL
 }
 
+data class NavigationEntry(
+    val screen: NutryScreen,
+    val selectedPatientId: Long? = null
+)
+
 data class MainUiState(
     val currentScreen: NutryScreen = NutryScreen.HOME,
-    val selectedPatientId: Long? = null
+    val selectedPatientId: Long? = null,
+    val backStack: List<NavigationEntry> = listOf(
+        NavigationEntry(screen = NutryScreen.HOME, selectedPatientId = null)
+    )
 )
 
 sealed interface MainAction {
@@ -26,6 +34,7 @@ sealed interface MainAction {
     data class ViewPatientHistory(val patientId: Long) : MainAction
     data object ContinueToAnthropometricAssessment : MainAction
     data object FinishAssessment : MainAction
+    data object NavigateBack : MainAction
     data object NavigateBackHome : MainAction
 }
 
@@ -36,53 +45,89 @@ class MainViewModel : ViewModel() {
     fun onAction(action: MainAction) {
         when (action) {
             is MainAction.NavigateTo -> {
-                uiState = uiState.copy(
-                    currentScreen = action.screen,
-                    selectedPatientId = if (
-                        action.screen == NutryScreen.NUTRITIONAL_ANAMNESIS ||
-                        action.screen == NutryScreen.ANTHROPOMETRIC_ASSESSMENT ||
-                        action.screen == NutryScreen.ASSESSMENT_FINAL ||
-                        action.screen == NutryScreen.PATIENT_HISTORY
-                    ) {
-                        uiState.selectedPatientId
-                    } else {
-                        null
-                    }
+                val selectedPatientId = if (
+                    action.screen == NutryScreen.NUTRITIONAL_ANAMNESIS ||
+                    action.screen == NutryScreen.ANTHROPOMETRIC_ASSESSMENT ||
+                    action.screen == NutryScreen.ASSESSMENT_FINAL ||
+                    action.screen == NutryScreen.PATIENT_HISTORY
+                ) {
+                    uiState.selectedPatientId
+                } else {
+                    null
+                }
+                pushEntry(
+                    NavigationEntry(
+                        screen = action.screen,
+                        selectedPatientId = selectedPatientId
+                    )
                 )
             }
 
             is MainAction.StartPatientAssessment -> {
-                uiState = uiState.copy(
-                    currentScreen = NutryScreen.NUTRITIONAL_ANAMNESIS,
-                    selectedPatientId = action.patientId
+                pushEntry(
+                    NavigationEntry(
+                        screen = NutryScreen.NUTRITIONAL_ANAMNESIS,
+                        selectedPatientId = action.patientId
+                    )
                 )
             }
 
             is MainAction.ViewPatientHistory -> {
-                uiState = uiState.copy(
-                    currentScreen = NutryScreen.PATIENT_HISTORY,
-                    selectedPatientId = action.patientId
+                pushEntry(
+                    NavigationEntry(
+                        screen = NutryScreen.PATIENT_HISTORY,
+                        selectedPatientId = action.patientId
+                    )
                 )
             }
 
             MainAction.ContinueToAnthropometricAssessment -> {
-                uiState = uiState.copy(
-                    currentScreen = NutryScreen.ANTHROPOMETRIC_ASSESSMENT
+                pushEntry(
+                    NavigationEntry(
+                        screen = NutryScreen.ANTHROPOMETRIC_ASSESSMENT,
+                        selectedPatientId = uiState.selectedPatientId
+                    )
                 )
             }
 
             MainAction.FinishAssessment -> {
+                pushEntry(
+                    NavigationEntry(
+                        screen = NutryScreen.ASSESSMENT_FINAL,
+                        selectedPatientId = uiState.selectedPatientId
+                    )
+                )
+            }
+
+            MainAction.NavigateBack -> {
+                if (uiState.backStack.size <= 1) return
+                val newStack = uiState.backStack.dropLast(1)
+                val last = newStack.last()
                 uiState = uiState.copy(
-                    currentScreen = NutryScreen.ASSESSMENT_FINAL
+                    backStack = newStack,
+                    currentScreen = last.screen,
+                    selectedPatientId = last.selectedPatientId
                 )
             }
 
             MainAction.NavigateBackHome -> {
                 uiState = uiState.copy(
                     currentScreen = NutryScreen.HOME,
-                    selectedPatientId = null
+                    selectedPatientId = null,
+                    backStack = listOf(
+                        NavigationEntry(screen = NutryScreen.HOME, selectedPatientId = null)
+                    )
                 )
             }
         }
+    }
+
+    private fun pushEntry(entry: NavigationEntry) {
+        val newStack = uiState.backStack + entry
+        uiState = uiState.copy(
+            backStack = newStack,
+            currentScreen = entry.screen,
+            selectedPatientId = entry.selectedPatientId
+        )
     }
 }

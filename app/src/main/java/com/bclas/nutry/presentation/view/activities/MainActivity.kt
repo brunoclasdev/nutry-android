@@ -2,11 +2,13 @@ package com.bclas.nutry.presentation.view.activities
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -48,6 +50,18 @@ class MainActivity : ComponentActivity() {
                     val nutritionalAnamnesisViewModel: NutritionalAnamnesisViewModel = viewModel()
                     val selectedPatient = patientRegistrationViewModel.uiState.registeredPatients
                         .firstOrNull { it.id == mainViewModel.uiState.selectedPatientId }
+                    LaunchedEffect(mainViewModel.uiState.currentScreen) {
+                        if (
+                            mainViewModel.uiState.currentScreen == NutryScreen.PATIENT_LIST ||
+                            mainViewModel.uiState.currentScreen == NutryScreen.PATIENT_HISTORY ||
+                            mainViewModel.uiState.currentScreen == NutryScreen.ASSESSMENT_FINAL
+                        ) {
+                            patientRegistrationViewModel.onAction(PatientRegistrationAction.ReloadPatients)
+                        }
+                    }
+                    BackHandler(enabled = mainViewModel.uiState.currentScreen != NutryScreen.HOME) {
+                        mainViewModel.onAction(MainAction.NavigateBack)
+                    }
 
                     when (mainViewModel.uiState.currentScreen) {
                         NutryScreen.HOME -> {
@@ -78,7 +92,7 @@ class MainActivity : ComponentActivity() {
                                 onAction = patientRegistrationViewModel::onAction,
                                 onBackClick = {
                                     patientRegistrationViewModel.onAction(PatientRegistrationAction.ClearForm)
-                                    mainViewModel.onAction(MainAction.NavigateBackHome)
+                                    mainViewModel.onAction(MainAction.NavigateBack)
                                 },
                                 onViewPatientsClick = {
                                     patientRegistrationViewModel.onAction(PatientRegistrationAction.ClearForm)
@@ -92,7 +106,7 @@ class MainActivity : ComponentActivity() {
                         NutryScreen.PATIENT_LIST -> {
                             PatientListScreen(
                                 patients = patientRegistrationViewModel.uiState.registeredPatients,
-                                onBackClick = { mainViewModel.onAction(MainAction.NavigateBackHome) },
+                                onBackClick = { mainViewModel.onAction(MainAction.NavigateBack) },
                                 onNewAssessmentClick = { patient ->
                                     nutritionalAnamnesisViewModel.onAction(NutritionalAnamnesisAction.ClearForm)
                                     anthropometricAssessmentViewModel.onAction(AnthropometricAssessmentAction.ClearForm)
@@ -111,7 +125,7 @@ class MainActivity : ComponentActivity() {
                         NutryScreen.PATIENT_HISTORY -> {
                             PatientHistoryScreen(
                                 patient = selectedPatient,
-                                onBackClick = { mainViewModel.onAction(MainAction.NavigateTo(NutryScreen.PATIENT_LIST)) },
+                                onBackClick = { mainViewModel.onAction(MainAction.NavigateBack) },
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = innerPadding
                             )
@@ -122,9 +136,7 @@ class MainActivity : ComponentActivity() {
                                 state = nutritionalAnamnesisViewModel.uiState,
                                 onAction = nutritionalAnamnesisViewModel::onAction,
                                 onBackClick = {
-                                    nutritionalAnamnesisViewModel.onAction(NutritionalAnamnesisAction.ClearForm)
-                                    anthropometricAssessmentViewModel.onAction(AnthropometricAssessmentAction.ClearForm)
-                                    mainViewModel.onAction(MainAction.NavigateTo(NutryScreen.PATIENT_LIST))
+                                    mainViewModel.onAction(MainAction.NavigateBack)
                                 },
                                 onProceedClick = {
                                     mainViewModel.onAction(MainAction.ContinueToAnthropometricAssessment)
@@ -139,21 +151,20 @@ class MainActivity : ComponentActivity() {
                                 state = anthropometricAssessmentViewModel.uiState,
                                 onAction = anthropometricAssessmentViewModel::onAction,
                                 onBackClick = {
-                                    anthropometricAssessmentViewModel.onAction(AnthropometricAssessmentAction.ClearForm)
-                                    mainViewModel.onAction(MainAction.NavigateTo(NutryScreen.PATIENT_LIST))
+                                    mainViewModel.onAction(MainAction.NavigateBack)
                                 },
                                 onFinishClick = {
                                     val selectedPatientId = mainViewModel.uiState.selectedPatientId
                                     if (selectedPatientId != null) {
-                                        patientRegistrationViewModel.onAction(
-                                            PatientRegistrationAction.SaveAssessmentForPatient(
-                                                patientId = selectedPatientId,
-                                                anamnesis = nutritionalAnamnesisViewModel.uiState.toDomain(),
-                                                anthropometric = anthropometricAssessmentViewModel.uiState.toDomain()
-                                            )
+                                        val saved = patientRegistrationViewModel.saveAssessmentForPatient(
+                                            patientId = selectedPatientId,
+                                            anamnesis = nutritionalAnamnesisViewModel.uiState.toDomain(),
+                                            anthropometric = anthropometricAssessmentViewModel.uiState.toDomain()
                                         )
+                                        if (saved) {
+                                            mainViewModel.onAction(MainAction.FinishAssessment)
+                                        }
                                     }
-                                    mainViewModel.onAction(MainAction.FinishAssessment)
                                 },
                                 patientName = selectedPatient?.fullName,
                                 modifier = Modifier.fillMaxSize(),

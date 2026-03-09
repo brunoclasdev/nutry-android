@@ -23,4 +23,7 @@ interface PatientDao {
 
     @Query("SELECT * FROM assessments ORDER BY id ASC")
     suspend fun getAllAssessments(): List<AssessmentEntity>
+
+    @Query("UPDATE patients SET attendanceHistorySerialized = :serialized WHERE id = :patientId")
+    suspend fun updateAttendanceHistory(patientId: Long, serialized: String)
 }
